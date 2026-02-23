@@ -1,5 +1,11 @@
 # nextclaw-core
 
+## 0.6.32
+
+### Patch Changes
+
+- Add Discord native slash commands backed by a shared command registry.
+
 ## 0.6.31
 
 ### Patch Changes

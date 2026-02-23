@@ -534,6 +534,14 @@ Configure channels in the UI at http://127.0.0.1:18791 or in `~/.nextclaw/config
 - `draftChunk`: controls preview streaming chunk size and break style; larger values reduce edit frequency.
 - `textChunkLimit` (default `2000`): outbound Discord message max chars per send/edit.
 
+Discord native slash commands (auto-registered):
+
+- `/help` or `/commands`
+- `/whoami` or `/id`
+- `/status`
+- `/reset` or `/new`
+- `/model [name|clear]`
+
 ### Telegram
 
 1. Create a bot via [@BotFather](https://t.me/BotFather) and get the token.

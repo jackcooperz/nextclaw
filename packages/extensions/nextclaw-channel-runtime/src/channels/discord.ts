@@ -7,8 +7,13 @@ import {
   GatewayIntentBits,
   Partials,
   MessageFlags,
+  REST,
+  Routes,
+  ApplicationCommandOptionType,
   type Message as DiscordMessage,
   type Attachment,
+  type ChatInputCommandInteraction,
+  type Interaction,
   type TextBasedChannel,
   type TextBasedChannelFields
 } from "discord.js";
@@ -17,7 +22,8 @@ import { join } from "node:path";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { getDataPath } from "../utils/helpers.js";
 import { ChannelTypingController } from "./typing-controller.js";
-import { isTypingStopControlMessage } from "@nextclaw/core";
+import { CommandRegistry, isTypingStopControlMessage, type CommandOption } from "@nextclaw/core";
+import type { SessionManager } from "@nextclaw/core";
 
 const DEFAULT_MEDIA_MAX_MB = 8;
 const MEDIA_FETCH_TIMEOUT_MS = 15000;
@@ -28,6 +34,7 @@ const DISCORD_MAX_LINES_PER_MESSAGE = 17;
 const STREAM_EDIT_MIN_INTERVAL_MS = 600;
 const STREAM_MAX_UPDATES_PER_MESSAGE = 40;
 const FENCE_RE = /^( {0,3})(`{3,}|~{3,})(.*)$/;
+const SLASH_GUILD_THRESHOLD = 10;
 
 type OpenFence = {
   indent: string;
@@ -56,9 +63,16 @@ export class DiscordChannel extends BaseChannel<Config["channels"]["discord"]> {
   name = "discord";
   private client: Client | null = null;
   private readonly typingController: ChannelTypingController;
+  private readonly commandRegistry: CommandRegistry | null;
 
-  constructor(config: Config["channels"]["discord"], bus: MessageBus) {
+  constructor(
+    config: Config["channels"]["discord"],
+    bus: MessageBus,
+    private sessionManager?: SessionManager,
+    private coreConfig?: Config
+  ) {
     super(config, bus);
+    this.commandRegistry = this.coreConfig ? new CommandRegistry(this.coreConfig, this.sessionManager) : null;
     this.typingController = new ChannelTypingController({
       heartbeatMs: TYPING_HEARTBEAT_MS,
       autoStopMs: TYPING_AUTO_STOP_MS,
@@ -89,10 +103,15 @@ export class DiscordChannel extends BaseChannel<Config["channels"]["discord"]> {
     this.client.on("ready", () => {
       // eslint-disable-next-line no-console
       console.log("Discord bot connected");
+      void this.registerSlashCommands();
     });
 
     this.client.on("messageCreate", async (message) => {
       await this.handleIncoming(message);
+    });
+
+    this.client.on("interactionCreate", async (interaction) => {
+      await this.handleInteraction(interaction);
     });
 
     await this.client.login(this.config.token);
@@ -241,6 +260,113 @@ export class DiscordChannel extends BaseChannel<Config["channels"]["discord"]> {
       this.stopTyping(channelId);
       throw error;
     }
+  }
+
+  private async handleInteraction(interaction: Interaction): Promise<void> {
+    if (!interaction.isChatInputCommand()) {
+      return;
+    }
+    await this.handleSlashCommand(interaction);
+  }
+
+  private async handleSlashCommand(interaction: ChatInputCommandInteraction): Promise<void> {
+    if (!this.commandRegistry) {
+      await this.replyInteraction(interaction, "Slash commands are not available.", true);
+      return;
+    }
+    const channelId = interaction.channelId;
+    if (!channelId) {
+      await this.replyInteraction(interaction, "Slash commands are not available in this channel.", true);
+      return;
+    }
+    const senderId = interaction.user.id;
+    const isGroup = Boolean(interaction.guildId);
+    if (!this.isAllowedByPolicy({ senderId, channelId, isGroup })) {
+      await this.replyInteraction(interaction, "You are not authorized to use commands here.", true);
+      return;
+    }
+    const args: Record<string, unknown> = {};
+    for (const option of interaction.options.data) {
+      if (typeof option.name === "string" && option.value !== undefined) {
+        args[option.name] = option.value;
+      }
+    }
+    try {
+      const result = await this.commandRegistry.execute(interaction.commandName, args, {
+        channel: this.name,
+        chatId: channelId,
+        senderId,
+        sessionKey: `${this.name}:${channelId}`
+      });
+      await this.replyInteraction(interaction, result.content, result.ephemeral ?? true);
+    } catch (error) {
+      await this.replyInteraction(interaction, "Command failed to execute.", true);
+      // eslint-disable-next-line no-console
+      console.error(`Discord slash command error: ${String(error)}`);
+    }
+  }
+
+  private async replyInteraction(
+    interaction: ChatInputCommandInteraction,
+    content: string,
+    ephemeral: boolean
+  ): Promise<void> {
+    const payload = { content, ephemeral };
+    if (interaction.deferred || interaction.replied) {
+      await interaction.followUp(payload);
+      return;
+    }
+    await interaction.reply(payload);
+  }
+
+  private async registerSlashCommands(): Promise<void> {
+    if (!this.client || !this.commandRegistry) {
+      return;
+    }
+    const appId = this.client.application?.id ?? this.client.user?.id;
+    if (!appId) {
+      return;
+    }
+    const commands = this.buildSlashCommandPayloads();
+    if (!commands.length) {
+      return;
+    }
+
+    const rest = new REST({ version: "10" }).setToken(this.config.token);
+    let guildIds: string[] = [];
+    try {
+      const guilds = await this.client.guilds.fetch();
+      guildIds = [...guilds.keys()];
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`Failed to fetch Discord guild list: ${String(error)}`);
+    }
+
+    try {
+      if (guildIds.length > 0 && guildIds.length <= SLASH_GUILD_THRESHOLD) {
+        for (const guildId of guildIds) {
+          await rest.put(Routes.applicationGuildCommands(appId, guildId), { body: commands });
+        }
+        // eslint-disable-next-line no-console
+        console.log(`Discord slash commands registered for ${guildIds.length} guild(s).`);
+      } else {
+        await rest.put(Routes.applicationCommands(appId), { body: commands });
+        // eslint-disable-next-line no-console
+        console.log("Discord slash commands registered globally.");
+      }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error(`Failed to register Discord slash commands: ${String(error)}`);
+    }
+  }
+
+  private buildSlashCommandPayloads(): Array<Record<string, unknown>> {
+    const specs = this.commandRegistry?.listSlashCommands() ?? [];
+    return specs.map((spec) => ({
+      name: spec.name,
+      description: spec.description,
+      options: mapCommandOptions(spec.options)
+    }));
   }
 
   private resolveProxyAgent(): ProxyAgent | null {
@@ -471,6 +597,30 @@ export class DiscordChannel extends BaseChannel<Config["channels"]["discord"]> {
 
   private stopTyping(channelId: string): void {
     this.typingController.stop(channelId);
+  }
+}
+
+function mapCommandOptions(options?: CommandOption[]): Array<Record<string, unknown>> | undefined {
+  if (!options || options.length === 0) {
+    return undefined;
+  }
+  return options.map((option) => ({
+    name: option.name,
+    description: option.description,
+    type: mapCommandOptionType(option.type),
+    required: option.required ?? false
+  }));
+}
+
+function mapCommandOptionType(type: CommandOption["type"]): number {
+  switch (type) {
+    case "boolean":
+      return ApplicationCommandOptionType.Boolean;
+    case "number":
+      return ApplicationCommandOptionType.Number;
+    case "string":
+    default:
+      return ApplicationCommandOptionType.String;
   }
 }
 

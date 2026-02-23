@@ -1,5 +1,11 @@
 # @nextclaw/openclaw-compat
 
+## 0.1.25
+
+### Patch Changes
+
+- Sync NextClaw packages with updated core and channel runtime versions.
+
 ## 0.1.24
 
 ### Patch Changes

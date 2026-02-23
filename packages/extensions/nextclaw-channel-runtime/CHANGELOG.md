@@ -1,5 +1,13 @@
 # @nextclaw/channel-runtime
 
+## 0.1.17
+
+### Patch Changes
+
+- Add Discord native slash commands backed by a shared command registry.
+- Updated dependencies
+  - @nextclaw/core@0.6.32
+
 ## 0.1.16
 
 ### Patch Changes

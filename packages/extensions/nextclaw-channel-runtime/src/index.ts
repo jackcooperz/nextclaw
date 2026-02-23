@@ -44,7 +44,7 @@ const BUILTIN_CHANNEL_RUNTIMES = {
     id: "discord",
     isEnabled: (config: Config) => config.channels.discord.enabled,
     createChannel: (context: BuiltinChannelCreateContext) =>
-      new DiscordChannel(context.config.channels.discord, context.bus),
+      new DiscordChannel(context.config.channels.discord, context.bus, context.sessionManager, context.config),
   },
   feishu: {
     id: "feishu",
