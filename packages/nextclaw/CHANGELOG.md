@@ -1,5 +1,11 @@
 # nextclaw
 
+## 0.8.2
+
+### Patch Changes
+
+- switch DocBrowser docs domain to docs.nextclaw.io and remove legacy pages.dev fallback
+
 ## 0.8.1
 
 ### Patch Changes

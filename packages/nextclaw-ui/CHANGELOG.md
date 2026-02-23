@@ -1,5 +1,11 @@
 # @nextclaw/ui
 
+## 0.5.2
+
+### Patch Changes
+
+- switch DocBrowser docs domain to docs.nextclaw.io and remove legacy pages.dev fallback
+
 ## 0.5.1
 
 ### Patch Changes

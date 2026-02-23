@@ -1,15 +1,15 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
 
 const DOCS_PRIMARY_DOMAIN = 'docs.nextclaw.io';
-const DOCS_FALLBACK_DOMAIN = 'nextclaw-docs.pages.dev';
+const DOCS_PAGES_DEV = 'nextclaw-docs.pages.dev';
 const DOCS_HOSTS = new Set([
     DOCS_PRIMARY_DOMAIN,
     `www.${DOCS_PRIMARY_DOMAIN}`,
-    DOCS_FALLBACK_DOMAIN,
-    `www.${DOCS_FALLBACK_DOMAIN}`,
+    DOCS_PAGES_DEV,
+    `www.${DOCS_PAGES_DEV}`,
 ]);
 
-export const DOCS_DEFAULT_BASE_URL = `https://${DOCS_FALLBACK_DOMAIN}`;
+export const DOCS_DEFAULT_BASE_URL = `https://${DOCS_PRIMARY_DOMAIN}`;
 
 export type DocBrowserMode = 'floating' | 'docked';
 
