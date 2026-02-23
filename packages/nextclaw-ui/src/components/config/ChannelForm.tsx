@@ -38,6 +38,13 @@ const GROUP_POLICY_OPTIONS: ChannelOption[] = [
   { value: 'disabled', label: 'disabled' }
 ];
 
+const STREAMING_MODE_OPTIONS: ChannelOption[] = [
+  { value: 'off', label: 'off' },
+  { value: 'partial', label: 'partial' },
+  { value: 'block', label: 'block' },
+  { value: 'progress', label: 'progress' }
+];
+
 // Field icon mapping
 const getFieldIcon = (fieldName: string) => {
   if (fieldName.includes('token') || fieldName.includes('secret') || fieldName.includes('password')) {
@@ -82,6 +89,9 @@ const CHANNEL_FIELDS: Record<string, ChannelField[]> = {
     { name: 'intents', type: 'number', label: t('intents') },
     { name: 'proxy', type: 'text', label: t('proxy') },
     { name: 'mediaMaxMb', type: 'number', label: 'Attachment Max Size (MB)' },
+    { name: 'streaming', type: 'select', label: 'Streaming Mode', options: STREAMING_MODE_OPTIONS },
+    { name: 'draftChunk', type: 'json', label: 'Draft Chunking (JSON)' },
+    { name: 'textChunkLimit', type: 'number', label: 'Text Chunk Limit' },
     { name: 'accountId', type: 'text', label: 'Account ID' },
     { name: 'dmPolicy', type: 'select', label: 'DM Policy', options: DM_POLICY_OPTIONS },
     { name: 'groupPolicy', type: 'select', label: 'Group Policy', options: GROUP_POLICY_OPTIONS },

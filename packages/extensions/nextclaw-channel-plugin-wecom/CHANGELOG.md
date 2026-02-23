@@ -1,5 +1,13 @@
 # @nextclaw/channel-plugin-wecom
 
+## 0.1.5
+
+### Patch Changes
+
+- Add Discord preview streaming config and runtime support while keeping channel plugin compatibility.
+- Updated dependencies
+  - @nextclaw/channel-runtime@0.1.16
+
 ## 0.1.4
 
 ### Patch Changes

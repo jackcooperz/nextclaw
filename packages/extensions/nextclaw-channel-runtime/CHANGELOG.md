@@ -1,5 +1,13 @@
 # @nextclaw/channel-runtime
 
+## 0.1.16
+
+### Patch Changes
+
+- Add Discord preview streaming config and runtime support while keeping channel plugin compatibility.
+- Updated dependencies
+  - @nextclaw/core@0.6.31
+
 ## 0.1.15
 
 ### Patch Changes

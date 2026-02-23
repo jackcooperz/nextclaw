@@ -1,5 +1,24 @@
 # @nextclaw/openclaw-compat
 
+## 0.1.24
+
+### Patch Changes
+
+- Add Discord preview streaming config and runtime support while keeping channel plugin compatibility.
+- Updated dependencies
+  - @nextclaw/core@0.6.31
+  - @nextclaw/channel-runtime@0.1.16
+  - @nextclaw/channel-plugin-discord@0.1.5
+  - @nextclaw/channel-plugin-telegram@0.1.5
+  - @nextclaw/channel-plugin-whatsapp@0.1.5
+  - @nextclaw/channel-plugin-feishu@0.1.5
+  - @nextclaw/channel-plugin-mochat@0.1.5
+  - @nextclaw/channel-plugin-dingtalk@0.1.5
+  - @nextclaw/channel-plugin-wecom@0.1.5
+  - @nextclaw/channel-plugin-email@0.1.5
+  - @nextclaw/channel-plugin-slack@0.1.5
+  - @nextclaw/channel-plugin-qq@0.1.5
+
 ## 0.1.23
 
 ### Patch Changes

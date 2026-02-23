@@ -1,6 +1,6 @@
 {
   "name": "nextclaw",
-  "version": "0.8.11",
+  "version": "0.8.12",
   "description": "Lightweight personal AI assistant with CLI, multi-provider routing, and channel integrations.",
   "private": false,
   "type": "module",
@@ -47,9 +47,9 @@
   "dependencies": {
     "chokidar": "^3.6.0",
     "commander": "^12.1.0",
-    "@nextclaw/core": "^0.6.30",
-    "@nextclaw/server": "^0.5.6",
-    "@nextclaw/openclaw-compat": "^0.1.23"
+    "@nextclaw/core": "^0.6.31",
+    "@nextclaw/server": "^0.5.7",
+    "@nextclaw/openclaw-compat": "^0.1.24"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

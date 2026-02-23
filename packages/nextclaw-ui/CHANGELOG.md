@@ -1,5 +1,11 @@
 # @nextclaw/ui
 
+## 0.5.7
+
+### Patch Changes
+
+- Add Discord preview streaming config and runtime support while keeping channel plugin compatibility.
+
 ## 0.5.6
 
 ### Patch Changes

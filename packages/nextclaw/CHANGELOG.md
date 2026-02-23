@@ -1,5 +1,15 @@
 # nextclaw
 
+## 0.8.12
+
+### Patch Changes
+
+- Add Discord preview streaming config and runtime support while keeping channel plugin compatibility.
+- Updated dependencies
+  - @nextclaw/core@0.6.31
+  - @nextclaw/openclaw-compat@0.1.24
+  - @nextclaw/server@0.5.7
+
 ## 0.8.11
 
 ### Patch Changes
