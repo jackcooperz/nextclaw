@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { MaskedInput } from '@/components/common/MaskedInput';
 import { KeyValueEditor } from '@/components/common/KeyValueEditor';
 import { t } from '@/lib/i18n';
@@ -149,22 +150,22 @@ export function ProviderForm() {
                   <Hash className="h-3.5 w-3.5 text-gray-500" />
                   {wireApiHint?.label ?? t('wireApi')}
                 </Label>
-                <select
-                  id="wireApi"
-                  value={wireApi}
-                  onChange={(e) => setWireApi(e.target.value as 'auto' | 'chat' | 'responses')}
-                  className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {(providerSpec.wireApiOptions || ['auto', 'chat', 'responses']).map((option) => (
-                    <option key={option} value={option}>
-                      {option === 'chat'
-                        ? t('wireApiChat')
-                        : option === 'responses'
-                          ? t('wireApiResponses')
-                          : t('wireApiAuto')}
-                    </option>
-                  ))}
-                </select>
+                <Select value={wireApi} onValueChange={(v) => setWireApi(v as 'auto' | 'chat' | 'responses')}>
+                  <SelectTrigger className="rounded-xl">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(providerSpec.wireApiOptions || ['auto', 'chat', 'responses']).map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option === 'chat'
+                          ? t('wireApiChat')
+                          : option === 'responses'
+                            ? t('wireApiResponses')
+                            : t('wireApiAuto')}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 

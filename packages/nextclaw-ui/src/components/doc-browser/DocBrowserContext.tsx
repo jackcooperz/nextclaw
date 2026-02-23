@@ -128,7 +128,7 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         setState(prev => {
             if (prev.historyIndex <= 0) return prev;
             const newIndex = prev.historyIndex - 1;
-            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex], navVersion: prev.navVersion + 1 };
+            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex] };
         });
     }, []);
 
@@ -136,7 +136,7 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         setState(prev => {
             if (prev.historyIndex >= prev.history.length - 1) return prev;
             const newIndex = prev.historyIndex + 1;
-            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex], navVersion: prev.navVersion + 1 };
+            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex] };
         });
     }, []);
 

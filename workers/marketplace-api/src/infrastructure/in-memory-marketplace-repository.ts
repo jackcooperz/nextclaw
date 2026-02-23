@@ -175,15 +175,6 @@ export class InMemoryMarketplaceRepository implements MarketplaceRepository {
   private sortItems(entries: ScoreEntry[], sort: MarketplaceSort, q: string | undefined): ScoreEntry[] {
     const next = [...entries];
 
-    if (sort === "downloads") {
-      next.sort((left, right) => {
-        const leftDownloads = left.item.metrics?.downloads30d ?? -1;
-        const rightDownloads = right.item.metrics?.downloads30d ?? -1;
-        return rightDownloads - leftDownloads;
-      });
-      return next;
-    }
-
     if (sort === "updated") {
       next.sort((left, right) => this.compareUpdatedAt(left.item, right.item));
       return next;
@@ -243,7 +234,6 @@ export class InMemoryMarketplaceRepository implements MarketplaceRepository {
       tags: item.tags,
       author: item.author,
       install: item.install,
-      metrics: item.metrics,
       updatedAt: item.updatedAt
     };
   }

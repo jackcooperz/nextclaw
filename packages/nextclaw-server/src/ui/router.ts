@@ -1,5 +1,6 @@
 import { Hono } from "hono";
-import { expandHome } from "@nextclaw/core";
+import { SkillsLoader, getWorkspacePathFromConfig } from "@nextclaw/core";
+import { buildPluginStatusReport } from "@nextclaw/openclaw-compat";
 import {
   buildConfigSchemaView,
   buildConfigMeta,
@@ -15,8 +16,6 @@ import {
   patchSession,
   deleteSession
 } from "./config.js";
-import { existsSync, readdirSync } from "node:fs";
-import { join, resolve } from "node:path";
 import type {
   ConfigActionExecuteRequest,
   MarketplaceApiConfig,
@@ -148,62 +147,101 @@ async function fetchMarketplaceData<T>(params: {
 function collectMarketplaceInstalledView(options: UiRouterOptions): MarketplaceInstalledView {
   const config = loadConfigOrDefault(options.configPath);
   const pluginRecordsMap = config.plugins.installs ?? {};
+  const pluginEntries = config.plugins.entries ?? {};
   const pluginRecords: MarketplaceInstalledRecord[] = [];
   const pluginSpecSet = new Set<string>();
+  const seenPluginIds = new Set<string>();
+
+  let discoveredPlugins: ReturnType<typeof buildPluginStatusReport>["plugins"] = [];
+  try {
+    const pluginReport = buildPluginStatusReport({
+      config,
+      workspaceDir: getWorkspacePathFromConfig(config)
+    });
+    discoveredPlugins = pluginReport.plugins;
+  } catch {
+    discoveredPlugins = [];
+  }
+
+  for (const plugin of discoveredPlugins) {
+    const installRecord = pluginRecordsMap[plugin.id];
+    const normalizedSpec = typeof installRecord?.spec === "string" && installRecord.spec.trim().length > 0
+      ? installRecord.spec.trim()
+      : plugin.id;
+    pluginRecords.push({
+      type: "plugin",
+      id: plugin.id,
+      spec: normalizedSpec,
+      label: plugin.name && plugin.name.trim().length > 0 ? plugin.name : plugin.id,
+      source: plugin.source,
+      installedAt: installRecord?.installedAt,
+      enabled: plugin.enabled,
+      runtimeStatus: plugin.status,
+      origin: plugin.origin,
+      installPath: installRecord?.installPath
+    });
+    pluginSpecSet.add(normalizedSpec);
+    seenPluginIds.add(plugin.id);
+  }
 
   for (const [pluginId, installRecord] of Object.entries(pluginRecordsMap)) {
+    if (seenPluginIds.has(pluginId)) {
+      continue;
+    }
+
     const normalizedSpec = typeof installRecord.spec === "string" && installRecord.spec.trim().length > 0
       ? installRecord.spec.trim()
       : pluginId;
+    const entry = pluginEntries[pluginId];
     pluginRecords.push({
       type: "plugin",
+      id: pluginId,
       spec: normalizedSpec,
       label: pluginId,
       source: installRecord.source,
-      installedAt: installRecord.installedAt
+      installedAt: installRecord.installedAt,
+      enabled: entry?.enabled !== false,
+      runtimeStatus: entry?.enabled === false ? "disabled" : "unresolved",
+      installPath: installRecord.installPath
     });
     pluginSpecSet.add(normalizedSpec);
+    seenPluginIds.add(pluginId);
   }
 
-  const pluginEntries = config.plugins.entries ?? {};
-  for (const pluginId of Object.keys(pluginEntries)) {
-    if (!pluginSpecSet.has(pluginId)) {
+  for (const [pluginId, entry] of Object.entries(pluginEntries)) {
+    if (!seenPluginIds.has(pluginId)) {
       pluginRecords.push({
         type: "plugin",
+        id: pluginId,
         spec: pluginId,
         label: pluginId,
-        source: "config"
+        source: "config",
+        enabled: entry?.enabled !== false,
+        runtimeStatus: entry?.enabled === false ? "disabled" : "unresolved"
       });
       pluginSpecSet.add(pluginId);
+      seenPluginIds.add(pluginId);
     }
   }
 
-  const workspacePath = resolve(expandHome(config.agents.defaults.workspace));
-  const skillsPath = join(workspacePath, "skills");
+  const workspacePath = getWorkspacePathFromConfig(config);
+  const skillsLoader = new SkillsLoader(workspacePath);
+  const availableSkillSet = new Set(skillsLoader.listSkills(true).map((skill) => skill.name));
+  const listedSkills = skillsLoader.listSkills(false);
   const skillSpecSet = new Set<string>();
-  const skillRecords: MarketplaceInstalledRecord[] = [];
-
-  if (existsSync(skillsPath)) {
-    const entries = readdirSync(skillsPath, { withFileTypes: true });
-    for (const entry of entries) {
-      if (!entry.isDirectory()) {
-        continue;
-      }
-      const skillSlug = entry.name;
-      const skillFile = join(skillsPath, skillSlug, "SKILL.md");
-      if (!existsSync(skillFile)) {
-        continue;
-      }
-
-      skillRecords.push({
-        type: "skill",
-        spec: skillSlug,
-        label: skillSlug,
-        source: "workspace"
-      });
-      skillSpecSet.add(skillSlug);
-    }
-  }
+  const skillRecords: MarketplaceInstalledRecord[] = listedSkills.map((skill) => {
+    const enabled = availableSkillSet.has(skill.name);
+    skillSpecSet.add(skill.name);
+    return {
+      type: "skill",
+      id: skill.name,
+      spec: skill.name,
+      label: skill.name,
+      source: skill.source,
+      enabled,
+      runtimeStatus: enabled ? "enabled" : "disabled"
+    };
+  });
 
   const records: MarketplaceInstalledRecord[] = [...pluginRecords, ...skillRecords].sort((left, right) => {
     if (left.type !== right.type) {
@@ -218,6 +256,12 @@ function collectMarketplaceInstalledView(options: UiRouterOptions): MarketplaceI
     skillSpecs: Array.from(skillSpecSet).sort((left, right) => left.localeCompare(right)),
     records
   };
+}
+
+function sanitizeMarketplaceItem<T extends Record<string, unknown>>(item: T): T {
+  const next = { ...item } as T & { metrics?: unknown };
+  delete next.metrics;
+  return next;
 }
 
 async function installMarketplaceItem(params: {
@@ -286,7 +330,10 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
-    return c.json(ok(result.data));
+    return c.json(ok({
+      ...result.data,
+      items: result.data.items.map((item) => sanitizeMarketplaceItem(item))
+    }));
   });
 
   app.get("/api/marketplace/items/:slug", async (c) => {
@@ -304,7 +351,7 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
-    return c.json(ok(result.data));
+    return c.json(ok(sanitizeMarketplaceItem(result.data)));
   });
 
   app.get("/api/marketplace/recommendations", async (c) => {
@@ -322,7 +369,10 @@ function registerMarketplaceRoutes(app: Hono, options: UiRouterOptions, marketpl
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
-    return c.json(ok(result.data));
+    return c.json(ok({
+      ...result.data,
+      items: result.data.items.map((item) => sanitizeMarketplaceItem(item))
+    }));
   });
 
   app.post("/api/marketplace/install", async (c) => {

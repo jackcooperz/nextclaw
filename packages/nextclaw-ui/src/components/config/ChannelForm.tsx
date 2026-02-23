@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { TagInput } from '@/components/common/TagInput';
 import { t } from '@/lib/i18n';
 import { hintForPath } from '@/lib/config-hints';
@@ -410,18 +411,21 @@ export function ChannelForm() {
                   )}
 
                   {field.type === 'select' && (
-                    <select
-                      id={field.name}
+                    <Select
                       value={(formData[field.name] as string) || ''}
-                      onChange={(e) => updateField(field.name, e.target.value)}
-                      className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
+                      onValueChange={(v) => updateField(field.name, v)}
                     >
-                      {(field.options ?? []).map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(field.options ?? []).map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
 
                   {field.type === 'json' && (

@@ -234,7 +234,7 @@ export type ConfigActionExecuteResult = {
 
 export type MarketplaceItemType = "plugin" | "skill";
 
-export type MarketplaceSort = "relevance" | "updated" | "downloads";
+export type MarketplaceSort = "relevance" | "updated";
 
 export type MarketplaceInstallKind = "npm" | "clawhub" | "git";
 
@@ -242,11 +242,6 @@ export type MarketplaceInstallSpec = {
   kind: MarketplaceInstallKind;
   spec: string;
   command: string;
-};
-
-export type MarketplaceItemMetrics = {
-  downloads30d?: number;
-  stars?: number;
 };
 
 export type MarketplaceItemSummary = {
@@ -258,7 +253,6 @@ export type MarketplaceItemSummary = {
   tags: string[];
   author: string;
   install: MarketplaceInstallSpec;
-  metrics?: MarketplaceItemMetrics;
   updatedAt: string;
 };
 
@@ -289,10 +283,15 @@ export type MarketplaceRecommendationView = {
 
 export type MarketplaceInstalledRecord = {
   type: MarketplaceItemType;
+  id?: string;
   spec: string;
   label?: string;
   source?: string;
   installedAt?: string;
+  enabled?: boolean;
+  runtimeStatus?: string;
+  origin?: string;
+  installPath?: string;
 };
 
 export type MarketplaceInstalledView = {

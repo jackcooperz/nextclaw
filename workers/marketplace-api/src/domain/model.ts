@@ -2,7 +2,7 @@ export const MARKETPLACE_ITEM_TYPES = ["plugin", "skill"] as const;
 
 export type MarketplaceItemType = (typeof MARKETPLACE_ITEM_TYPES)[number];
 
-export type MarketplaceSort = "relevance" | "updated" | "downloads";
+export type MarketplaceSort = "relevance" | "updated";
 
 export type MarketplaceInstallKind = "npm" | "clawhub" | "git";
 
@@ -10,11 +10,6 @@ export type MarketplaceInstallSpec = {
   kind: MarketplaceInstallKind;
   spec: string;
   command: string;
-};
-
-export type MarketplaceItemMetrics = {
-  downloads30d?: number;
-  stars?: number;
 };
 
 export type MarketplaceItem = {
@@ -29,7 +24,6 @@ export type MarketplaceItem = {
   sourceRepo?: string;
   homepage?: string;
   install: MarketplaceInstallSpec;
-  metrics?: MarketplaceItemMetrics;
   publishedAt: string;
   updatedAt: string;
 };
@@ -66,7 +60,6 @@ export type MarketplaceItemSummary = {
   tags: string[];
   author: string;
   install: MarketplaceInstallSpec;
-  metrics?: MarketplaceItemMetrics;
   updatedAt: string;
 };
 

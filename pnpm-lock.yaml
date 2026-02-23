@@ -202,7 +202,7 @@ importers:
         specifier: ^0.1.20
         version: link:../nextclaw-openclaw-compat
       '@nextclaw/server':
-        specifier: ^0.4.16
+        specifier: ^0.5.0
         version: link:../nextclaw-server
       chokidar:
         specifier: ^3.6.0
@@ -399,6 +399,9 @@ importers:
       '@nextclaw/core':
         specifier: ^0.6.27
         version: link:../nextclaw-core
+      '@nextclaw/openclaw-compat':
+        specifier: ^0.1.20
+        version: link:../nextclaw-openclaw-compat
       hono:
         specifier: ^4.6.2
         version: 4.11.9

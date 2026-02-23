@@ -2,7 +2,7 @@ import type { Context } from "hono";
 import { DomainValidationError } from "../../domain/errors";
 import { MARKETPLACE_ITEM_TYPES, type MarketplaceItemType, type MarketplaceListQuery, type MarketplaceSort } from "../../domain/model";
 
-const SORT_VALUES: MarketplaceSort[] = ["relevance", "updated", "downloads"];
+const SORT_VALUES: MarketplaceSort[] = ["relevance", "updated"];
 
 export class MarketplaceQueryParser {
   parseListQuery(c: Context): MarketplaceListQuery {

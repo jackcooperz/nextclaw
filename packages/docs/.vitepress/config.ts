@@ -17,7 +17,7 @@ export default defineConfig({
                 // Notify on initial load
                 notify();
                 // Watch for SPA navigation (VitePress uses client-side routing)
-                let lastUrl = location.href;
+                var lastUrl = location.href;
                 new MutationObserver(function() {
                     if (location.href !== lastUrl) {
                         lastUrl = location.href;
@@ -26,6 +26,14 @@ export default defineConfig({
                 }).observe(document, { subtree: true, childList: true });
                 // Also listen for popstate (back/forward within iframe)
                 window.addEventListener('popstate', notify);
+                // Listen for navigation requests from parent (DocBrowser back/forward)
+                window.addEventListener('message', function(e) {
+                    if (e.data && e.data.type === 'docs-navigate' && typeof e.data.path === 'string') {
+                        var a = document.createElement('a');
+                        a.href = e.data.path;
+                        a.click();
+                    }
+                });
             })();
         `],
     ],

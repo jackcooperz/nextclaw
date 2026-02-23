@@ -65,7 +65,6 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
       sourceRepo: this.readOptionalString(raw.sourceRepo, `catalog.items[${index}].sourceRepo`),
       homepage: this.readOptionalString(raw.homepage, `catalog.items[${index}].homepage`),
       install: this.parseInstallSpec(raw.install, index),
-      metrics: this.parseMetrics(raw.metrics, index),
       publishedAt: this.readString(raw.publishedAt, `catalog.items[${index}].publishedAt`),
       updatedAt: this.readString(raw.updatedAt, `catalog.items[${index}].updatedAt`)
     };
@@ -86,24 +85,6 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
       kind,
       spec: this.readString(value.spec, `catalog.items[${index}].install.spec`),
       command: this.readString(value.command, `catalog.items[${index}].install.command`)
-    };
-  }
-
-  private parseMetrics(value: unknown, index: number): { downloads30d?: number; stars?: number } | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-
-    if (!this.isRawRecord(value)) {
-      throw new DomainValidationError(`catalog.items[${index}].metrics must be an object`);
-    }
-
-    const downloads30d = this.readOptionalNumber(value.downloads30d, `catalog.items[${index}].metrics.downloads30d`);
-    const stars = this.readOptionalNumber(value.stars, `catalog.items[${index}].metrics.stars`);
-
-    return {
-      downloads30d,
-      stars
     };
   }
 
@@ -138,16 +119,6 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
       return undefined;
     }
     return this.readString(value, path);
-  }
-
-  private readOptionalNumber(value: unknown, path: string): number | undefined {
-    if (value === undefined || value === null) {
-      return undefined;
-    }
-    if (typeof value !== "number" || Number.isNaN(value)) {
-      throw new DomainValidationError(`${path} must be a number`);
-    }
-    return value;
   }
 
   private readStringArray(value: unknown, path: string): string[] {

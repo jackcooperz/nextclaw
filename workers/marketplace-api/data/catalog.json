@@ -18,10 +18,6 @@
         "spec": "@nextclaw/openclaw-compat",
         "command": "nextclaw plugins install @nextclaw/openclaw-compat"
       },
-      "metrics": {
-        "downloads30d": 1240,
-        "stars": 312
-      },
       "publishedAt": "2025-12-10T10:00:00.000Z",
       "updatedAt": "2026-02-22T09:40:00.000Z"
     },
@@ -40,10 +36,6 @@
         "kind": "npm",
         "spec": "@nextclaw/channel-runtime",
         "command": "nextclaw plugins install @nextclaw/channel-runtime"
-      },
-      "metrics": {
-        "downloads30d": 980,
-        "stars": 287
       },
       "publishedAt": "2025-11-18T10:00:00.000Z",
       "updatedAt": "2026-02-21T13:21:00.000Z"
@@ -64,10 +56,6 @@
         "spec": "@nextclaw/bridge",
         "command": "nextclaw plugins install @nextclaw/bridge"
       },
-      "metrics": {
-        "downloads30d": 610,
-        "stars": 173
-      },
       "publishedAt": "2025-10-11T10:00:00.000Z",
       "updatedAt": "2026-02-20T15:15:00.000Z"
     },
@@ -86,10 +74,6 @@
         "kind": "clawhub",
         "spec": "project-os",
         "command": "nextclaw skills install project-os"
-      },
-      "metrics": {
-        "downloads30d": 540,
-        "stars": 145
       },
       "publishedAt": "2025-09-16T10:00:00.000Z",
       "updatedAt": "2026-02-23T07:10:00.000Z"
@@ -110,10 +94,6 @@
         "spec": "writing-skills",
         "command": "nextclaw skills install writing-skills"
       },
-      "metrics": {
-        "downloads30d": 376,
-        "stars": 120
-      },
       "publishedAt": "2025-08-08T10:00:00.000Z",
       "updatedAt": "2026-02-18T07:12:00.000Z"
     },
@@ -132,10 +112,6 @@
         "kind": "clawhub",
         "spec": "skill-creator",
         "command": "nextclaw skills install skill-creator"
-      },
-      "metrics": {
-        "downloads30d": 302,
-        "stars": 460
       },
       "publishedAt": "2025-07-30T10:00:00.000Z",
       "updatedAt": "2026-02-17T11:55:00.000Z"

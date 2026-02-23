@@ -23,10 +23,10 @@ import {
  */
 export function DocBrowser() {
     const {
-        isOpen, mode, currentUrl,
+        isOpen, mode, currentUrl, navVersion,
         close, toggleMode,
         goBack, goForward, canGoBack, canGoForward,
-        navigate,
+        navigate, syncUrl,
     } = useDocBrowser();
 
     const [urlInput, setUrlInput] = useState('');
@@ -41,6 +41,8 @@ export function DocBrowser() {
     const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
     const resizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
     const dockResizeRef = useRef<{ startX: number; startW: number } | null>(null);
+    const iframeRef = useRef<HTMLIFrameElement>(null);
+    const prevNavVersionRef = useRef(navVersion);
 
     // Sync URL input with current URL
     useEffect(() => {
@@ -51,6 +53,23 @@ export function DocBrowser() {
             setUrlInput(currentUrl);
         }
     }, [currentUrl]);
+
+    // When currentUrl changes without navVersion bump (goBack/goForward),
+    // use postMessage to SPA-navigate inside the iframe instead of remounting
+    useEffect(() => {
+        if (navVersion !== prevNavVersionRef.current) {
+            // navVersion changed — iframe will remount via key, no need to postMessage
+            prevNavVersionRef.current = navVersion;
+            return;
+        }
+        // Same navVersion — means goBack/goForward triggered
+        if (iframeRef.current?.contentWindow) {
+            try {
+                const path = new URL(currentUrl).pathname;
+                iframeRef.current.contentWindow.postMessage({ type: 'docs-navigate', path }, '*');
+            } catch { /* ignore */ }
+        }
+    }, [currentUrl, navVersion]);
 
     // Reposition floating window near right edge when switching from docked
     useEffect(() => {
@@ -66,12 +85,12 @@ export function DocBrowser() {
     useEffect(() => {
         const handler = (e: MessageEvent) => {
             if (e.data?.type === 'docs-route-change' && typeof e.data.url === 'string') {
-                navigate(e.data.url);
+                syncUrl(e.data.url);
             }
         };
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
-    }, [navigate]);
+    }, [syncUrl]);
 
     const handleUrlSubmit = useCallback((e: React.FormEvent) => {
         e.preventDefault();
@@ -169,6 +188,29 @@ export function DocBrowser() {
         window.addEventListener('mouseup', onUp);
     }, [dockedWidth]);
 
+    // --- Left-edge resize logic (floating mode — adjusts both position and width) ---
+    const onLeftResizeStart = useCallback((e: React.MouseEvent) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setIsResizing(true);
+        const startX = e.clientX;
+        const startW = floatSize.w;
+        const startPosX = floatPos.x;
+        const onMove = (ev: MouseEvent) => {
+            const delta = startX - ev.clientX;
+            const newW = Math.max(360, startW + delta);
+            setFloatSize(prev => ({ ...prev, w: newW }));
+            setFloatPos(prev => ({ ...prev, x: startPosX - (newW - startW) }));
+        };
+        const onUp = () => {
+            setIsResizing(false);
+            window.removeEventListener('mousemove', onMove);
+            window.removeEventListener('mouseup', onUp);
+        };
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onUp);
+    }, [floatSize.w, floatPos.x]);
+
     if (!isOpen) return null;
 
     const isDocked = mode === 'docked';
@@ -264,7 +306,8 @@ export function DocBrowser() {
             {/* Iframe Content */}
             <div className="flex-1 relative overflow-hidden">
                 <iframe
-                    key={currentUrl}
+                    ref={iframeRef}
+                    key={navVersion}
                     src={currentUrl}
                     className="absolute inset-0 w-full h-full border-0"
                     title="NextClaw Documentation"
@@ -293,6 +336,8 @@ export function DocBrowser() {
             {/* Resize Handles (floating only) */}
             {!isDocked && (
                 <>
+                    {/* Left edge */}
+                    <div className="absolute top-0 left-0 w-1.5 h-full cursor-ew-resize z-20 hover:bg-primary/10 transition-colors" onMouseDown={onLeftResizeStart} />
                     {/* Right edge */}
                     <div className="absolute top-0 right-0 w-1.5 h-full cursor-ew-resize z-20 hover:bg-primary/10 transition-colors" onMouseDown={onResizeStart} data-axis="x" />
                     {/* Bottom edge */}

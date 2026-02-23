@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { hintForPath } from '@/lib/config-hints';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -84,9 +85,9 @@ export function RuntimeConfig() {
           accountId: binding.match?.accountId ?? '',
           peer: binding.match?.peer
             ? {
-                kind: binding.match.peer.kind,
-                id: binding.match.peer.id
-              }
+              kind: binding.match.peer.kind,
+              id: binding.match.peer.id
+            }
             : undefined
         }
       }))
@@ -260,17 +261,18 @@ export function RuntimeConfig() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-800">{dmScopeHint?.label ?? 'DM Scope'}</label>
-            <select
-              value={dmScope}
-              onChange={(event) => setDmScope(event.target.value as DmScope)}
-              className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
-            >
-              {DM_SCOPE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <Select value={dmScope} onValueChange={(v) => setDmScope(v as DmScope)}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {DM_SCOPE_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-800">
@@ -429,10 +431,10 @@ export function RuntimeConfig() {
                     }
                     placeholder="Account ID (optional)"
                   />
-                  <select
-                    value={peerKind}
-                    onChange={(event) => {
-                      const nextKind = event.target.value as PeerKind;
+                  <Select
+                    value={peerKind || '__none__'}
+                    onValueChange={(v) => {
+                      const nextKind = v === '__none__' ? '' : v as PeerKind;
                       if (!nextKind) {
                         updateBinding(index, {
                           ...binding,
@@ -454,13 +456,17 @@ export function RuntimeConfig() {
                         }
                       });
                     }}
-                    className="flex h-10 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm"
                   >
-                    <option value="">Peer kind (optional)</option>
-                    <option value="direct">direct</option>
-                    <option value="group">group</option>
-                    <option value="channel">channel</option>
-                  </select>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__none__">Peer kind (optional)</SelectItem>
+                      <SelectItem value="direct">direct</SelectItem>
+                      <SelectItem value="group">group</SelectItem>
+                      <SelectItem value="channel">channel</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <Input
                     value={binding.match.peer?.id ?? ''}
                     onChange={(event) =>
@@ -470,9 +476,9 @@ export function RuntimeConfig() {
                           ...binding.match,
                           peer: peerKind
                             ? {
-                                kind: peerKind,
-                                id: event.target.value
-                              }
+                              kind: peerKind,
+                              id: event.target.value
+                            }
                             : undefined
                         }
                       })

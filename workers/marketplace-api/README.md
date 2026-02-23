@@ -5,7 +5,7 @@ Cloudflare Worker + Hono 的只读 Marketplace API，用于插件与 Skill 的�
 ## API
 
 - `GET /health`
-- `GET /api/v1/items?q=&type=plugin|skill&tag=&sort=relevance|updated|downloads&page=1&pageSize=20`
+- `GET /api/v1/items?q=&type=plugin|skill&tag=&sort=relevance|updated&page=1&pageSize=20`
 - `GET /api/v1/items/:slug?type=plugin|skill`
 - `GET /api/v1/recommendations?scene=default&limit=10`
 
