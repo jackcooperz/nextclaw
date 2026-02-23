@@ -13,7 +13,7 @@ import { fileURLToPath } from "node:url";
 
 const rootDir = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const PRIMARY_INCLUDE_DIRS = ["packages", "bridge", "scripts"];
+const PRIMARY_INCLUDE_DIRS = ["apps", "packages", "workers", "bridge", "scripts"];
 const DEFAULT_BENCHMARK_INCLUDE_DIRS = ["src", "extensions", "scripts"];
 const INCLUDE_EXTENSIONS = [".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs", ".sh", ".yml", ".yaml"];
 const EXCLUDE_DIRS = [
@@ -114,7 +114,7 @@ const detectLanguage = (extension) => {
 
 const detectScope = (relativePath) => {
   const segments = relativePath.split("/");
-  if ((segments[0] === "packages" || segments[0] === "extensions") && segments[1]) {
+  if ((segments[0] === "packages" || segments[0] === "extensions" || segments[0] === "apps" || segments[0] === "workers") && segments[1]) {
     return `${segments[0]}/${segments[1]}`;
   }
   if (segments[0]) {

@@ -14,6 +14,7 @@
   - `deploy:pages` 输出目录改为 `apps/landing/dist`
   - `deploy:docs` 输出目录改为 `apps/docs/.vitepress/dist`
 - 依赖锁文件同步：执行 `pnpm install` 以更新 `pnpm-lock.yaml` 中 importer 路径。
+- 指标脚本同步：`scripts/code-volume-metrics.mjs` 的扫描目录新增 `apps` 与 `workers`，并将 scope 统计细化到 `apps/<name>`、`workers/<name>`，避免迁移后指标丢失或颗粒度下降。
 
 ## 测试 / 验证 / 验收方式
 
@@ -22,6 +23,7 @@
 - `pnpm build`
 - `pnpm lint`
 - `pnpm tsc`
+- `pnpm metrics:loc`
 
 结果：全部通过（存在历史 lint warning，但无 error）。
 

@@ -15,7 +15,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <nav class="hidden md:flex gap-8 text-sm font-medium">
           <a href="#features" class="text-muted-foreground hover:text-foreground transition-colors">Features</a>
           <a href="https://github.com/Peiiii/nextclaw" target="_blank" class="text-muted-foreground hover:text-foreground transition-colors">GitHub</a>
-          <a href="#" class="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
+          <a href="https://docs.nextclaw.io" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
         </nav>
         <div class="flex items-center gap-4">
           <a href="https://github.com/Peiiii/nextclaw" target="_blank" class="p-2 text-muted-foreground hover:text-foreground transition-colors rounded-full hover:bg-secondary">
@@ -150,7 +150,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         <div class="relative z-10">
           <h2 class="text-3xl md:text-5xl font-bold mb-6">Ready to upgrade your AI?</h2>
           <p class="text-lg text-muted-foreground mb-10 max-w-xl mx-auto">Get started with NextClaw in seconds. One command and your local gateway is fully operational.</p>
-          <a href="https://github.com/Peiiii/nextclaw" target="_blank" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-transform hover:scale-105 shadow-xl shadow-primary/20 focus:ring-2 focus:ring-primary focus:outline-none text-lg">
+          <a href="https://docs.nextclaw.io" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-medium bg-primary text-primary-foreground hover:bg-primary/90 transition-transform hover:scale-105 shadow-xl shadow-primary/20 focus:ring-2 focus:ring-primary focus:outline-none text-lg">
             View Documentation
             <i data-lucide="arrow-right" class="w-5 h-5 ml-1"></i>
           </a>
@@ -169,6 +169,7 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
           Released under the MIT License.
         </div>
         <div class="flex gap-4">
+          <a href="https://docs.nextclaw.io" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
           <a href="https://github.com/Peiiii/nextclaw" target="_blank" class="text-muted-foreground hover:text-foreground transition-colors">GitHub</a>
           <a href="https://www.npmjs.com/package/nextclaw" target="_blank" class="text-muted-foreground hover:text-foreground transition-colors">NPM</a>
         </div>

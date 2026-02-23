@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-23T07:46:53.211Z",
+  "generatedAt": "2026-02-23T07:48:14.541Z",
   "projectRoot": "/Users/peiwang/Projects/nextbot",
   "git": {
     "sha": "",
@@ -7,7 +7,9 @@
   },
   "scope": {
     "includeDirs": [
+      "apps",
       "packages",
+      "workers",
       "bridge",
       "scripts"
     ],
@@ -34,20 +36,20 @@
     ]
   },
   "totals": {
-    "files": 202,
-    "totalLines": 31727,
-    "blankLines": 3421,
-    "commentLines": 210,
-    "codeLines": 28096
+    "files": 222,
+    "totalLines": 32948,
+    "blankLines": 3590,
+    "commentLines": 219,
+    "codeLines": 29139
   },
   "byLanguage": [
     {
       "name": "TypeScript",
-      "files": 145,
-      "totalLines": 25652,
-      "blankLines": 2798,
-      "commentLines": 153,
-      "codeLines": 22701
+      "files": 162,
+      "totalLines": 26770,
+      "blankLines": 2963,
+      "commentLines": 161,
+      "codeLines": 23646
     },
     {
       "name": "TSX",
@@ -59,19 +61,19 @@
     },
     {
       "name": "MJS",
-      "files": 5,
-      "totalLines": 739,
-      "blankLines": 94,
+      "files": 6,
+      "totalLines": 773,
+      "blankLines": 96,
       "commentLines": 0,
-      "codeLines": 645
+      "codeLines": 677
     },
     {
       "name": "JavaScript",
-      "files": 12,
-      "totalLines": 439,
-      "blankLines": 57,
-      "commentLines": 12,
-      "codeLines": 370
+      "files": 14,
+      "totalLines": 508,
+      "blankLines": 59,
+      "commentLines": 13,
+      "codeLines": 436
     },
     {
       "name": "Shell",
@@ -140,6 +142,14 @@
       "codeLines": 1784
     },
     {
+      "name": "workers/marketplace-api",
+      "files": 15,
+      "totalLines": 828,
+      "blankLines": 134,
+      "commentLines": 0,
+      "codeLines": 694
+    },
+    {
       "name": "scripts",
       "files": 2,
       "totalLines": 679,
@@ -148,17 +158,33 @@
       "codeLines": 598
     },
     {
+      "name": "apps/landing",
+      "files": 4,
+      "totalLines": 295,
+      "blankLines": 25,
+      "commentLines": 4,
+      "codeLines": 266
+    },
+    {
       "name": "bridge",
       "files": 5,
       "totalLines": 359,
       "blankLines": 65,
       "commentLines": 45,
       "codeLines": 249
+    },
+    {
+      "name": "apps/docs",
+      "files": 1,
+      "totalLines": 98,
+      "blankLines": 10,
+      "commentLines": 5,
+      "codeLines": 83
     }
   ],
   "delta": {
-    "previousCodeLines": 25972,
-    "codeLines": 2124,
-    "percent": 8.18
+    "previousCodeLines": 28445,
+    "codeLines": 694,
+    "percent": 2.44
   }
 }
