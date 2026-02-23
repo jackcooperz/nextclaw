@@ -1,5 +1,14 @@
 # nextclaw
 
+## 0.8.1
+
+### Patch Changes
+
+- fix(ui): refine floating doc browser resize axis handling
+  - support axis-aware floating resize behavior
+  - keep width unchanged when dragging vertical-only handle
+  - keep height unchanged when dragging horizontal-only handle
+
 ## 0.8.0
 
 ### Minor Changes

@@ -32,7 +32,10 @@ export function DocBrowser() {
     const [urlInput, setUrlInput] = useState('');
     const [isDragging, setIsDragging] = useState(false);
     const [isResizing, setIsResizing] = useState(false);
-    const [floatPos, setFloatPos] = useState({ x: 120, y: 80 });
+    const [floatPos, setFloatPos] = useState(() => ({
+        x: Math.max(40, window.innerWidth - 520),
+        y: 80,
+    }));
     const [floatSize, setFloatSize] = useState({ w: 480, h: 600 });
     const [dockedWidth, setDockedWidth] = useState(420);
     const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
@@ -48,6 +51,16 @@ export function DocBrowser() {
             setUrlInput(currentUrl);
         }
     }, [currentUrl]);
+
+    // Reposition floating window near right edge when switching from docked
+    useEffect(() => {
+        if (mode === 'floating') {
+            setFloatPos(prev => ({
+                x: Math.max(40, window.innerWidth - floatSize.w - 40),
+                y: prev.y,
+            }));
+        }
+    }, [mode, floatSize.w]);
 
     // Listen for route changes from the iframe via postMessage
     useEffect(() => {
@@ -106,11 +119,12 @@ export function DocBrowser() {
         };
     }, [isDragging]);
 
-    // --- Resize logic (floating mode — bottom-right corner) ---
+    // --- Resize logic (floating mode) ---
     const onResizeStart = useCallback((e: React.MouseEvent) => {
         e.preventDefault();
         e.stopPropagation();
         setIsResizing(true);
+        const axis = (e.currentTarget as HTMLElement).dataset.axis; // 'x', 'y', or undefined (both)
         resizeRef.current = {
             startX: e.clientX,
             startY: e.clientY,
@@ -119,10 +133,10 @@ export function DocBrowser() {
         };
         const onMove = (ev: MouseEvent) => {
             if (!resizeRef.current) return;
-            setFloatSize({
-                w: Math.max(360, resizeRef.current.startW + (ev.clientX - resizeRef.current.startX)),
-                h: Math.max(400, resizeRef.current.startH + (ev.clientY - resizeRef.current.startY)),
-            });
+            setFloatSize(prev => ({
+                w: axis === 'y' ? prev.w : Math.max(360, resizeRef.current!.startW + (ev.clientX - resizeRef.current!.startX)),
+                h: axis === 'x' ? prev.h : Math.max(400, resizeRef.current!.startH + (ev.clientY - resizeRef.current!.startY)),
+            }));
         };
         const onUp = () => {
             setIsResizing(false);

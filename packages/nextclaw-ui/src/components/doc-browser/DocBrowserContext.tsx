@@ -13,12 +13,19 @@ export const DOCS_DEFAULT_BASE_URL = `https://${DOCS_FALLBACK_DOMAIN}`;
 
 export type DocBrowserMode = 'floating' | 'docked';
 
+/** Normalize URL for comparison: strip .html and trailing slash */
+function normalizeDocUrl(u: string): string {
+    try { return new URL(u).pathname.replace(/\.html$/, '').replace(/\/$/, ''); } catch { return u; }
+}
+
 interface DocBrowserState {
     isOpen: boolean;
     mode: DocBrowserMode;
     currentUrl: string;
     history: string[];
     historyIndex: number;
+    /** Increments on parent-initiated navigation (navigate/goBack/goForward) */
+    navVersion: number;
 }
 
 interface DocBrowserActions {
@@ -26,7 +33,10 @@ interface DocBrowserActions {
     close: () => void;
     toggleMode: () => void;
     setMode: (mode: DocBrowserMode) => void;
+    /** Parent-initiated navigation — will cause iframe to reload to this URL */
     navigate: (url: string) => void;
+    /** Iframe-initiated sync — records URL to history without reloading iframe */
+    syncUrl: (url: string) => void;
     goBack: () => void;
     goForward: () => void;
     canGoBack: boolean;
@@ -60,6 +70,7 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         currentUrl: `${DOCS_DEFAULT_BASE_URL}/guide/getting-started`,
         history: [`${DOCS_DEFAULT_BASE_URL}/guide/getting-started`],
         historyIndex: 0,
+        navVersion: 0,
     });
 
     const open = useCallback((url?: string) => {
@@ -70,6 +81,7 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
             currentUrl: targetUrl,
             history: [...prev.history.slice(0, prev.historyIndex + 1), targetUrl],
             historyIndex: prev.historyIndex + 1,
+            navVersion: prev.navVersion + 1,
         }));
     }, [state.currentUrl]);
 
@@ -85,14 +97,24 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         setState(prev => ({ ...prev, mode }));
     }, []);
 
+    /** Parent-initiated: push to history AND bump navVersion so iframe reloads */
     const navigate = useCallback((url: string) => {
         setState(prev => {
-            // Normalize URLs for comparison (strip trailing slash, .html suffix)
-            const normalize = (u: string) => {
-                try { return new URL(u).pathname.replace(/\.html$/, '').replace(/\/$/, ''); } catch { return u; }
+            if (normalizeDocUrl(url) === normalizeDocUrl(prev.currentUrl)) return prev;
+            return {
+                ...prev,
+                currentUrl: url,
+                history: [...prev.history.slice(0, prev.historyIndex + 1), url],
+                historyIndex: prev.historyIndex + 1,
+                navVersion: prev.navVersion + 1,
             };
-            // Skip if same as current URL (prevents loop from postMessage echo)
-            if (normalize(url) === normalize(prev.currentUrl)) return prev;
+        });
+    }, []);
+
+    /** Iframe-initiated: push to history but do NOT bump navVersion (no iframe reload) */
+    const syncUrl = useCallback((url: string) => {
+        setState(prev => {
+            if (normalizeDocUrl(url) === normalizeDocUrl(prev.currentUrl)) return prev;
             return {
                 ...prev,
                 currentUrl: url,
@@ -106,7 +128,7 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         setState(prev => {
             if (prev.historyIndex <= 0) return prev;
             const newIndex = prev.historyIndex - 1;
-            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex] };
+            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex], navVersion: prev.navVersion + 1 };
         });
     }, []);
 
@@ -114,7 +136,7 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         setState(prev => {
             if (prev.historyIndex >= prev.history.length - 1) return prev;
             const newIndex = prev.historyIndex + 1;
-            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex] };
+            return { ...prev, historyIndex: newIndex, currentUrl: prev.history[newIndex], navVersion: prev.navVersion + 1 };
         });
     }, []);
 
@@ -128,11 +150,12 @@ export function DocBrowserProvider({ children }: { children: ReactNode }) {
         toggleMode,
         setMode,
         navigate,
+        syncUrl,
         goBack,
         goForward,
         canGoBack,
         canGoForward,
-    }), [state, open, close, toggleMode, setMode, navigate, goBack, goForward, canGoBack, canGoForward]);
+    }), [state, open, close, toggleMode, setMode, navigate, syncUrl, goBack, goForward, canGoBack, canGoForward]);
 
     return (
         <DocBrowserContext.Provider value={value}>
