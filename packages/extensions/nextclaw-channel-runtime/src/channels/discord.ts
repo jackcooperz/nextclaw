@@ -292,13 +292,19 @@ export class DiscordChannel extends BaseChannel<Config["channels"]["discord"]> {
       }
     }
     try {
+      await interaction.deferReply({ ephemeral: true });
       const result = await this.commandRegistry.execute(interaction.commandName, args, {
         channel: this.name,
         chatId: channelId,
         senderId,
         sessionKey: `${this.name}:${channelId}`
       });
-      await this.replyInteraction(interaction, result.content, result.ephemeral ?? true);
+      if (result.ephemeral === false) {
+        await interaction.editReply({ content: "Command executed." });
+        await interaction.followUp({ content: result.content, ephemeral: false });
+        return;
+      }
+      await interaction.editReply({ content: result.content });
     } catch (error) {
       await this.replyInteraction(interaction, "Command failed to execute.", true);
       // eslint-disable-next-line no-console

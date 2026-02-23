@@ -1,6 +1,6 @@
 {
   "name": "@nextclaw/openclaw-compat",
-  "version": "0.1.25",
+  "version": "0.1.26",
   "private": false,
   "description": "OpenClaw plugin compatibility layer for NextClaw.",
   "type": "module",
@@ -27,7 +27,7 @@
     "@nextclaw/core": "^0.6.32",
     "@nextclaw/channel-plugin-telegram": "^0.1.5",
     "@nextclaw/channel-plugin-whatsapp": "^0.1.5",
-    "@nextclaw/channel-plugin-discord": "^0.1.5",
+    "@nextclaw/channel-plugin-discord": "^0.1.6",
     "@nextclaw/channel-plugin-feishu": "^0.1.5",
     "@nextclaw/channel-plugin-mochat": "^0.1.5",
     "@nextclaw/channel-plugin-dingtalk": "^0.1.5",
@@ -35,7 +35,7 @@
     "@nextclaw/channel-plugin-email": "^0.1.5",
     "@nextclaw/channel-plugin-slack": "^0.1.5",
     "@nextclaw/channel-plugin-qq": "^0.1.5",
-    "@nextclaw/channel-runtime": "^0.1.17"
+    "@nextclaw/channel-runtime": "^0.1.18"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

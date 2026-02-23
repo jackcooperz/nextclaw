@@ -1,5 +1,13 @@
 # @nextclaw/channel-plugin-discord
 
+## 0.1.6
+
+### Patch Changes
+
+- fix: defer Discord slash command replies to avoid interaction timeouts
+- Updated dependencies
+  - @nextclaw/channel-runtime@0.1.18
+
 ## 0.1.5
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # nextclaw-server
 
+## 0.5.9
+
+### Patch Changes
+
+- fix: defer Discord slash command replies to avoid interaction timeouts
+- Updated dependencies
+  - @nextclaw/openclaw-compat@0.1.26
+
 ## 0.5.8
 
 ### Patch Changes

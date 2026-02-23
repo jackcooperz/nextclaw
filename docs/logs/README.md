@@ -1,6 +1,7 @@
 # Logs
 
 - [docs/logs/2026-02-23-discord-streaming-preview/v0.8.15-discord-streaming-preview/README.md](docs/logs/2026-02-23-discord-streaming-preview/v0.8.15-discord-streaming-preview/README.md)
+- [docs/logs/2026-02-23-discord-slash-commands/v0.8.14-discord-slash-timeout-fix/README.md](docs/logs/2026-02-23-discord-slash-commands/v0.8.14-discord-slash-timeout-fix/README.md)
 - [docs/logs/2026-02-23-discord-slash-commands/v0.6.32-discord-slash-commands/README.md](docs/logs/2026-02-23-discord-slash-commands/v0.6.32-discord-slash-commands/README.md)
 - [docs/logs/2026-02-23-cron-ui/v0.8.14-cron-ui/README.md](docs/logs/2026-02-23-cron-ui/v0.8.14-cron-ui/README.md)
 - [docs/logs/2026-02-23-weather-query-stall-fix/v0.8.10-weather-query-stall-fix/README.md](docs/logs/2026-02-23-weather-query-stall-fix/v0.8.10-weather-query-stall-fix/README.md)
