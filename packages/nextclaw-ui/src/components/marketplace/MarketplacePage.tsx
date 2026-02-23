@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Download, PackageSearch, Sparkles, Store } from 'lucide-react';
+import { Download, PackageSearch } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Tabs } from '@/components/ui/tabs-custom';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { useInstallMarketplaceItem, useManageMarketplaceItem, useMarketplaceInstalled, useMarketplaceItems, useMarketplaceRecommendations } from '@/hooks/useMarketplace';
+import {
+  useInstallMarketplaceItem,
+  useManageMarketplaceItem,
+  useMarketplaceInstalled,
+  useMarketplaceItems
+} from '@/hooks/useMarketplace';
 import type { MarketplaceInstalledRecord, MarketplaceItemSummary, MarketplaceManageAction, MarketplaceSort } from '@/api/types';
 
 const PAGE_SIZE = 12;
@@ -22,16 +27,13 @@ type ManageState = {
   action?: MarketplaceManageAction;
 };
 
-type InstalledSpecSets = {
-  plugin: Set<string>;
-  skill: Set<string>;
-};
-
 type InstalledRenderEntry = {
   key: string;
   record: MarketplaceInstalledRecord;
   item?: MarketplaceItemSummary;
 };
+
+type CardStatus = 'available' | 'installed' | 'enabled' | 'disabled';
 
 function normalizeMarketplaceKey(value: string | undefined): string {
   return (value ?? '').trim().toLowerCase();
@@ -40,37 +42,6 @@ function normalizeMarketplaceKey(value: string | undefined): string {
 function toLookupKey(type: MarketplaceItemSummary['type'], value: string | undefined): string {
   const normalized = normalizeMarketplaceKey(value);
   return normalized.length > 0 ? `${type}:${normalized}` : '';
-}
-
-function buildInstalledSpecSets(
-  records: { pluginSpecs: string[]; skillSpecs: string[]; records: MarketplaceInstalledRecord[] } | undefined
-): InstalledSpecSets {
-  const plugin = new Set((records?.pluginSpecs ?? []).map((value) => normalizeMarketplaceKey(value)).filter(Boolean));
-  const skill = new Set((records?.skillSpecs ?? []).map((value) => normalizeMarketplaceKey(value)).filter(Boolean));
-
-  for (const record of records?.records ?? []) {
-    const target = record.type === 'plugin' ? plugin : skill;
-    const specKey = normalizeMarketplaceKey(record.spec);
-    if (specKey) {
-      target.add(specKey);
-    }
-    const labelKey = normalizeMarketplaceKey(record.label);
-    if (labelKey) {
-      target.add(labelKey);
-    }
-    const idKey = normalizeMarketplaceKey(record.id);
-    if (idKey) {
-      target.add(idKey);
-    }
-  }
-
-  return { plugin, skill };
-}
-
-function isInstalled(item: MarketplaceItemSummary, sets: InstalledSpecSets): boolean {
-  const target = item.type === 'plugin' ? sets.plugin : sets.skill;
-  const candidateKeys = [item.install.spec, item.slug, item.id].map((value) => normalizeMarketplaceKey(value)).filter(Boolean);
-  return candidateKeys.some((key) => target.has(key));
 }
 
 function buildCatalogLookup(items: MarketplaceItemSummary[]): Map<string, MarketplaceItemSummary> {
@@ -94,7 +65,7 @@ function buildInstalledRecordLookup(records: MarketplaceInstalledRecord[]): Map<
   const lookup = new Map<string, MarketplaceInstalledRecord>();
 
   for (const record of records) {
-    const candidates = [record.spec, record.label, record.id];
+    const candidates = [record.spec, record.id, record.label];
     for (const candidate of candidates) {
       const lookupKey = toLookupKey(record.type, candidate);
       if (!lookupKey || lookup.has(lookupKey)) {
@@ -105,21 +76,6 @@ function buildInstalledRecordLookup(records: MarketplaceInstalledRecord[]): Map<
   }
 
   return lookup;
-}
-
-function findCatalogItemForRecord(
-  record: MarketplaceInstalledRecord,
-  catalogLookup: Map<string, MarketplaceItemSummary>
-): MarketplaceItemSummary | undefined {
-  const bySpec = catalogLookup.get(toLookupKey(record.type, record.spec));
-  if (bySpec) {
-    return bySpec;
-  }
-  const byId = catalogLookup.get(toLookupKey(record.type, record.id));
-  if (byId) {
-    return byId;
-  }
-  return catalogLookup.get(toLookupKey(record.type, record.label));
 }
 
 function findInstalledRecordForItem(
@@ -140,6 +96,23 @@ function findInstalledRecordForItem(
   return undefined;
 }
 
+function findCatalogItemForRecord(
+  record: MarketplaceInstalledRecord,
+  catalogLookup: Map<string, MarketplaceItemSummary>
+): MarketplaceItemSummary | undefined {
+  const bySpec = catalogLookup.get(toLookupKey(record.type, record.spec));
+  if (bySpec) {
+    return bySpec;
+  }
+
+  const byId = catalogLookup.get(toLookupKey(record.type, record.id));
+  if (byId) {
+    return byId;
+  }
+
+  return catalogLookup.get(toLookupKey(record.type, record.label));
+}
+
 function matchInstalledSearch(
   record: MarketplaceInstalledRecord,
   item: MarketplaceItemSummary | undefined,
@@ -154,8 +127,6 @@ function matchInstalledSearch(
     record.id,
     record.spec,
     record.label,
-    record.source,
-    record.runtimeStatus,
     item?.name,
     item?.slug,
     item?.summary,
@@ -168,72 +139,50 @@ function matchInstalledSearch(
     .some((value) => value.includes(normalizedQuery));
 }
 
-function TypeBadge({ type }: { type: MarketplaceItemSummary['type'] }) {
+function resolveCardStatus(record: MarketplaceInstalledRecord | undefined): CardStatus {
+  if (!record) {
+    return 'available';
+  }
+  if (record.enabled === false) {
+    return 'disabled';
+  }
+  if (record.enabled === true) {
+    return 'enabled';
+  }
+  return 'installed';
+}
+
+function StatusBadge(props: { status: CardStatus }) {
+  if (props.status === 'enabled') {
+    return <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-emerald-50 text-emerald-600">Enabled</span>;
+  }
+
+  if (props.status === 'disabled') {
+    return <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-amber-50 text-amber-700">Disabled</span>;
+  }
+
+  if (props.status === 'installed') {
+    return <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-indigo-50 text-indigo-600">Installed</span>;
+  }
+
+  return <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-gray-100 text-gray-600">Available</span>;
+}
+
+function TypeBadge(props: { type: MarketplaceItemSummary['type'] }) {
   return (
     <span
       className={cn(
-        'text-[11px] uppercase px-2 py-1 rounded-full font-semibold',
-        type === 'plugin' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
+        'text-[10px] uppercase px-2 py-1 rounded-full font-semibold tracking-wide',
+        props.type === 'plugin' ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'
       )}
     >
-      {type}
+      {props.type}
     </span>
   );
 }
 
-function InstalledBadge() {
-  return <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-indigo-50 text-indigo-600">Installed</span>;
-}
-
-function EnabledStateBadge(props: { enabled?: boolean }) {
-  if (props.enabled === undefined) {
-    return null;
-  }
-
-  return props.enabled
-    ? <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-emerald-50 text-emerald-600">Enabled</span>
-    : <span className="text-[11px] px-2 py-1 rounded-full font-semibold bg-amber-50 text-amber-700">Disabled</span>;
-}
-
-function RecordActionButtons(props: {
-  record: MarketplaceInstalledRecord;
-  state: ManageState;
-  onAction: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
-}) {
-  const targetId = props.record.id || props.record.spec;
-  const busyForRecord = props.state.isPending && props.state.targetId === targetId;
-  const canToggle = props.record.type === 'plugin';
-  const canUninstallPlugin = props.record.type === 'plugin' && props.record.origin !== 'bundled';
-  const canUninstallSkill = props.record.type === 'skill' && props.record.source === 'workspace';
-  const canUninstall = canUninstallPlugin || canUninstallSkill;
-
-  return (
-    <div className="flex items-center gap-2">
-      {canToggle && (
-        <button
-          disabled={props.state.isPending}
-          onClick={() => props.onAction(props.record.enabled === false ? 'enable' : 'disable', props.record)}
-          className="inline-flex items-center h-8 px-3 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
-        >
-          {busyForRecord && props.state.action !== 'uninstall'
-            ? (props.state.action === 'enable' ? 'Enabling...' : 'Disabling...')
-            : (props.record.enabled === false ? 'Enable' : 'Disable')}
-        </button>
-      )}
-      {canUninstall && (
-        <button
-          disabled={props.state.isPending}
-          onClick={() => props.onAction('uninstall', props.record)}
-          className="inline-flex items-center h-8 px-3 rounded-lg text-xs font-semibold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 disabled:opacity-50"
-        >
-          {busyForRecord && props.state.action === 'uninstall' ? 'Uninstalling...' : 'Uninstall'}
-        </button>
-      )}
-    </div>
-  );
-}
-
 function FilterPanel(props: {
+  scope: ScopeType;
   searchText: string;
   typeFilter: FilterType;
   sort: MarketplaceSort;
@@ -242,19 +191,18 @@ function FilterPanel(props: {
   onSortChange: (value: MarketplaceSort) => void;
 }) {
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-4 mb-5">
+    <div className="bg-white border border-gray-200 rounded-xl p-4 mb-4">
       <div className="flex gap-3 items-center">
         <div className="flex-1 min-w-0 relative">
           <PackageSearch className="h-4 w-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
           <input
             value={props.searchText}
             onChange={(event) => props.onSearchTextChange(event.target.value)}
-            placeholder="Search by name, slug, tags..."
+            placeholder="Search extensions..."
             className="w-full h-9 border border-gray-200 rounded-lg pl-9 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
           />
         </div>
 
-        {/* Segmented type filter */}
         <div className="inline-flex h-9 rounded-lg bg-gray-100 p-0.5 shrink-0">
           {([
             { value: 'all', label: 'All' },
@@ -277,185 +225,99 @@ function FilterPanel(props: {
           ))}
         </div>
 
-        <Select value={props.sort} onValueChange={(v) => props.onSortChange(v as MarketplaceSort)}>
-          <SelectTrigger className="h-9 w-[150px] shrink-0 rounded-lg">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="relevance">Relevance</SelectItem>
-            <SelectItem value="updated">Recently Updated</SelectItem>
-          </SelectContent>
-        </Select>
+        {props.scope === 'all' && (
+          <Select value={props.sort} onValueChange={(v) => props.onSortChange(v as MarketplaceSort)}>
+            <SelectTrigger className="h-9 w-[150px] shrink-0 rounded-lg">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="relevance">Relevance</SelectItem>
+              <SelectItem value="updated">Recently Updated</SelectItem>
+            </SelectContent>
+          </Select>
+        )}
       </div>
     </div>
   );
 }
 
-function InstallButton(props: {
-  item: MarketplaceItemSummary;
-  installState: InstallState;
-  installed: boolean;
-  onInstall: (item: MarketplaceItemSummary) => void;
-}) {
-  const isInstalling = props.installState.isPending && props.installState.installingSpec === props.item.install.spec;
-
-  if (props.installed) {
-    return (
-      <button
-        disabled
-        className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold bg-gray-100 text-gray-500 cursor-not-allowed"
-      >
-        Installed
-      </button>
-    );
-  }
-
-  return (
-    <button
-      onClick={() => props.onInstall(props.item)}
-      disabled={props.installState.isPending}
-      className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-black disabled:opacity-50"
-    >
-      <Download className="h-3.5 w-3.5" />
-      {isInstalling ? 'Installing...' : 'Install'}
-    </button>
-  );
-}
-
-function RecommendationSection(props: {
-  items: MarketplaceItemSummary[];
-  loading: boolean;
-  installState: InstallState;
-  installedSets: InstalledSpecSets;
-  onInstall: (item: MarketplaceItemSummary) => void;
-}) {
-  return (
-    <section className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Sparkles className="h-4 w-4 text-amber-500" />
-        <h3 className="text-[15px] font-bold text-gray-900">Recommended</h3>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {props.items.map((item) => {
-          const installed = isInstalled(item, props.installedSets);
-          return (
-            <div key={item.id} className="bg-white border border-gray-200 rounded-xl p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <div className="text-[14px] font-semibold text-gray-900">{item.name}</div>
-                  <div className="text-[12px] text-gray-500 mt-0.5">{item.summary}</div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <TypeBadge type={item.type} />
-                  {installed && <InstalledBadge />}
-                </div>
-              </div>
-              <div className="mt-3 flex items-center justify-between">
-                <code className="text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1">{item.install.spec}</code>
-                <InstallButton
-                  item={item}
-                  installed={installed}
-                  installState={props.installState}
-                  onInstall={props.onInstall}
-                />
-              </div>
-            </div>
-          );
-        })}
-
-        {props.loading && <div className="text-[13px] text-gray-500">Loading recommendations...</div>}
-        {!props.loading && props.items.length === 0 && <div className="text-[13px] text-gray-500">No recommendations yet.</div>}
-      </div>
-    </section>
-  );
-}
-
-function MarketplaceItemCard(props: {
-  item: MarketplaceItemSummary;
-  installedRecord?: MarketplaceInstalledRecord;
+function MarketplaceListCard(props: {
+  item?: MarketplaceItemSummary;
+  record?: MarketplaceInstalledRecord;
   installState: InstallState;
   manageState: ManageState;
-  installed: boolean;
   onInstall: (item: MarketplaceItemSummary) => void;
   onManage: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
 }) {
-  return (
-    <article className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow">
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="text-[14px] font-semibold text-gray-900">{props.item.name}</h4>
-        <div className="flex items-center gap-2">
-          <TypeBadge type={props.item.type} />
-          {props.installed && <InstalledBadge />}
-          {props.installed && <EnabledStateBadge enabled={props.installedRecord?.enabled} />}
-        </div>
-      </div>
+  const record = props.record;
+  const type = props.item?.type ?? record?.type;
+  const status = resolveCardStatus(record);
+  const title = props.item?.name ?? record?.label ?? record?.id ?? record?.spec ?? 'Unknown Item';
+  const summary = props.item?.summary ?? (record ? 'Installed locally. Details are currently unavailable from marketplace.' : '');
+  const spec = props.item?.install.spec ?? record?.spec ?? '';
 
-      <p className="text-[12px] text-gray-500 mt-1 min-h-10">{props.item.summary}</p>
+  const targetId = record?.id || record?.spec;
+  const busyForRecord = Boolean(targetId) && props.manageState.isPending && props.manageState.targetId === targetId;
 
-      <div className="flex flex-wrap gap-1 mt-2">
-        {props.item.tags.slice(0, 3).map((tag) => (
-          <span key={`${props.item.id}-${tag}`} className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
-            {tag}
-          </span>
-        ))}
-      </div>
+  const canToggle = record?.type === 'plugin';
+  const canUninstallPlugin = record?.type === 'plugin' && record.origin !== 'bundled';
+  const canUninstallSkill = record?.type === 'skill' && record.source === 'workspace';
+  const canUninstall = Boolean(canUninstallPlugin || canUninstallSkill);
 
-      <div className="mt-3 text-[11px] text-gray-500">By {props.item.author}</div>
-
-      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-        <code className="text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1 truncate">{props.item.install.spec}</code>
-        {props.installed && props.installedRecord ? (
-          <RecordActionButtons
-            record={props.installedRecord}
-            state={props.manageState}
-            onAction={props.onManage}
-          />
-        ) : (
-          <InstallButton
-            item={props.item}
-            installed={props.installed}
-            installState={props.installState}
-            onInstall={props.onInstall}
-          />
-        )}
-      </div>
-    </article>
-  );
-}
-
-function InstalledRecordCard(props: {
-  record: MarketplaceInstalledRecord;
-  manageState: ManageState;
-  onManage: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
-}) {
-  const installedAt = props.record.installedAt ? new Date(props.record.installedAt).toLocaleString() : undefined;
-  const sourceHint = props.record.source ? `source: ${props.record.source}` : undefined;
+  const isInstalling = props.installState.isPending && props.item && props.installState.installingSpec === props.item.install.spec;
 
   return (
-    <article className="bg-white border border-gray-200 rounded-xl p-4 hover:shadow-sm transition-shadow" title={sourceHint}>
-      <div className="flex items-start justify-between gap-2">
-        <h4 className="text-[14px] font-semibold text-gray-900">{props.record.label || props.record.spec}</h4>
-        <div className="flex items-center gap-2">
-          <TypeBadge type={props.record.type} />
-          <InstalledBadge />
-          <EnabledStateBadge enabled={props.record.enabled} />
+    <article className="bg-white border border-gray-200 rounded-xl px-4 py-3 hover:border-gray-300 transition-colors">
+      <div className="flex items-start gap-3 justify-between">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 mb-1">
+            {type && <TypeBadge type={type} />}
+            <StatusBadge status={status} />
+          </div>
+
+          <div className="text-[15px] font-semibold text-gray-900 truncate">{title}</div>
+          <p className="text-[12px] text-gray-500 mt-1 line-clamp-2">{summary}</p>
+          {spec && (
+            <code className="inline-flex mt-2 text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1 max-w-full truncate">
+              {spec}
+            </code>
+          )}
         </div>
-      </div>
 
-      <p className="text-[12px] text-gray-500 mt-1 min-h-10">Installed locally. This item is not in the current marketplace catalog.</p>
+        <div className="shrink-0 flex items-center gap-2">
+          {props.item && !record && (
+            <button
+              onClick={() => props.onInstall(props.item as MarketplaceItemSummary)}
+              disabled={props.installState.isPending}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold bg-gray-900 text-white hover:bg-black disabled:opacity-50"
+            >
+              <Download className="h-3.5 w-3.5" />
+              {isInstalling ? 'Installing...' : 'Install'}
+            </button>
+          )}
 
-      <div className="flex flex-wrap gap-1 mt-2">
-        {installedAt && <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">{installedAt}</span>}
-      </div>
+          {record && canToggle && (
+            <button
+              disabled={props.manageState.isPending}
+              onClick={() => props.onManage(record.enabled === false ? 'enable' : 'disable', record)}
+              className="inline-flex items-center h-8 px-3 rounded-lg text-xs font-semibold border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
+              {busyForRecord && props.manageState.action !== 'uninstall'
+                ? (props.manageState.action === 'enable' ? 'Enabling...' : 'Disabling...')
+                : (record.enabled === false ? 'Enable' : 'Disable')}
+            </button>
+          )}
 
-      <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between gap-2">
-        <code className="text-[11px] text-gray-500 bg-gray-100 rounded px-2 py-1 truncate" title={sourceHint}>{props.record.spec}</code>
-        <RecordActionButtons
-          record={props.record}
-          state={props.manageState}
-          onAction={props.onManage}
-        />
+          {record && canUninstall && (
+            <button
+              disabled={props.manageState.isPending}
+              onClick={() => props.onManage('uninstall', record)}
+              className="inline-flex items-center h-8 px-3 rounded-lg text-xs font-semibold border border-rose-200 text-rose-600 bg-white hover:bg-rose-50 disabled:opacity-50"
+            >
+              {busyForRecord && props.manageState.action === 'uninstall' ? 'Removing...' : 'Uninstall'}
+            </button>
+          )}
+        </div>
       </div>
     </article>
   );
@@ -469,7 +331,7 @@ function PaginationBar(props: {
   onNext: () => void;
 }) {
   return (
-    <div className="mt-5 flex items-center justify-end gap-2">
+    <div className="mt-4 flex items-center justify-end gap-2">
       <button
         className="h-8 px-3 rounded-lg border border-gray-200 text-sm text-gray-700 disabled:opacity-40"
         onClick={props.onPrev}
@@ -516,7 +378,7 @@ export function MarketplacePage() {
     page,
     pageSize: PAGE_SIZE
   });
-  const recommendationsQuery = useMarketplaceRecommendations({ scene: 'default', limit: 4 });
+
   const installMutation = useInstallMarketplaceItem();
   const manageMutation = useManageMarketplaceItem();
 
@@ -524,36 +386,30 @@ export function MarketplacePage() {
     () => installedQuery.data?.records ?? [],
     [installedQuery.data?.records]
   );
-  const installedSets = buildInstalledSpecSets(installedQuery.data);
-  const installedRecordLookup = useMemo(
-    () => buildInstalledRecordLookup(installedRecords),
-    [installedRecords]
-  );
+
   const allItems = useMemo(
     () => itemsQuery.data?.items ?? [],
     [itemsQuery.data?.items]
   );
-  const recommendations = useMemo(
-    () => recommendationsQuery.data?.items ?? [],
-    [recommendationsQuery.data?.items]
-  );
 
   const catalogLookup = useMemo(
-    () => buildCatalogLookup([...allItems, ...recommendations]),
-    [allItems, recommendations]
+    () => buildCatalogLookup(allItems),
+    [allItems]
+  );
+
+  const installedRecordLookup = useMemo(
+    () => buildInstalledRecordLookup(installedRecords),
+    [installedRecords]
   );
 
   const installedEntries = useMemo<InstalledRenderEntry[]>(() => {
     const entries = installedRecords
       .filter((record) => (typeFilter === 'all' ? true : record.type === typeFilter))
-      .map((record) => {
-        const item = findCatalogItemForRecord(record, catalogLookup);
-        return {
-          key: `${record.type}:${record.spec}:${record.label ?? ''}`,
-          record,
-          item
-        };
-      })
+      .map((record) => ({
+        key: `${record.type}:${record.spec}:${record.id ?? ''}`,
+        record,
+        item: findCatalogItemForRecord(record, catalogLookup)
+      }))
       .filter((entry) => matchInstalledSearch(entry.record, entry.item, query));
 
     entries.sort((left, right) => {
@@ -572,9 +428,7 @@ export function MarketplacePage() {
     return entries;
   }, [installedRecords, typeFilter, catalogLookup, query]);
 
-  const total = scope === 'installed'
-    ? installedEntries.length
-    : (itemsQuery.data?.total ?? 0);
+  const total = scope === 'installed' ? installedEntries.length : (itemsQuery.data?.total ?? 0);
   const totalPages = scope === 'installed' ? 1 : (itemsQuery.data?.totalPages ?? 0);
 
   const listSummary = useMemo(() => {
@@ -582,21 +436,15 @@ export function MarketplacePage() {
       if (installedQuery.isLoading) {
         return 'Loading...';
       }
-      if (installedEntries.length === 0) {
-        return 'No installed items';
-      }
-      const installedTotal = installedQuery.data?.total ?? installedEntries.length;
-      return `Showing ${installedEntries.length} / ${installedTotal}`;
+      return `${installedEntries.length} installed`;
     }
 
     if (!itemsQuery.data) {
       return 'Loading...';
     }
-    if (allItems.length === 0) {
-      return 'No results';
-    }
-    return `Showing ${allItems.length} / ${total}`;
-  }, [scope, installedQuery.isLoading, installedQuery.data, installedEntries.length, itemsQuery.data, allItems.length, total]);
+
+    return `${allItems.length} / ${total}`;
+  }, [scope, installedQuery.isLoading, installedEntries.length, itemsQuery.data, allItems.length, total]);
 
   const installState: InstallState = {
     isPending: installMutation.isPending,
@@ -648,15 +496,9 @@ export function MarketplacePage() {
 
   return (
     <div className="animate-fade-in pb-20">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">Marketplace</h2>
-          <p className="text-[13px] text-gray-500 mt-1">Search, discover and install plugins/skills.</p>
-        </div>
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 text-indigo-600 text-xs font-semibold">
-          <Store className="h-3.5 w-3.5" />
-          Read-only Catalog
-        </div>
+      <div className="mb-5">
+        <h2 className="text-2xl font-bold text-gray-900">Marketplace</h2>
+        <p className="text-[13px] text-gray-500 mt-1">A cleaner extension list focused on install / enable / disable.</p>
       </div>
 
       <Tabs
@@ -666,10 +508,11 @@ export function MarketplacePage() {
           setScope(value as ScopeType);
           setPage(1);
         }}
-        className="mb-5"
+        className="mb-4"
       />
 
       <FilterPanel
+        scope={scope}
         searchText={searchText}
         typeFilter={typeFilter}
         sort={sort}
@@ -684,19 +527,9 @@ export function MarketplacePage() {
         }}
       />
 
-      {scope === 'all' && (
-        <RecommendationSection
-          items={recommendations}
-          loading={recommendationsQuery.isLoading}
-          installState={installState}
-          installedSets={installedSets}
-          onInstall={handleInstall}
-        />
-      )}
-
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[15px] font-bold text-gray-900">{scope === 'installed' ? 'Installed Items' : 'All Items'}</h3>
+          <h3 className="text-[15px] font-bold text-gray-900">{scope === 'installed' ? 'Installed' : 'Extensions'}</h3>
           <span className="text-[12px] text-gray-500">{listSummary}</span>
         </div>
 
@@ -711,13 +544,12 @@ export function MarketplacePage() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+        <div className="space-y-2">
           {scope === 'all' && allItems.map((item) => (
-            <MarketplaceItemCard
+            <MarketplaceListCard
               key={item.id}
               item={item}
-              installedRecord={findInstalledRecordForItem(item, installedRecordLookup)}
-              installed={isInstalled(item, installedSets)}
+              record={findInstalledRecordForItem(item, installedRecordLookup)}
               installState={installState}
               manageState={manageState}
               onInstall={handleInstall}
@@ -726,20 +558,15 @@ export function MarketplacePage() {
           ))}
 
           {scope === 'installed' && installedEntries.map((entry) => (
-            entry.item
-              ? (
-                <MarketplaceItemCard
-                  key={`catalog:${entry.key}:${entry.item.id}`}
-                  item={entry.item}
-                  installedRecord={entry.record}
-                  installed
-                  installState={installState}
-                  manageState={manageState}
-                  onInstall={handleInstall}
-                  onManage={handleManage}
-                />
-              )
-              : <InstalledRecordCard key={`local:${entry.key}`} record={entry.record} manageState={manageState} onManage={handleManage} />
+            <MarketplaceListCard
+              key={entry.key}
+              item={entry.item}
+              record={entry.record}
+              installState={installState}
+              manageState={manageState}
+              onInstall={handleInstall}
+              onManage={handleManage}
+            />
           ))}
         </div>
 
