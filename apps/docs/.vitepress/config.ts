@@ -43,6 +43,7 @@ export default defineConfig({
 
         nav: [
             { text: 'Guide', link: '/guide/getting-started' },
+            { text: 'Roadmap', link: '/guide/roadmap' },
             { text: 'Channels', link: '/guide/channels' },
             { text: 'GitHub', link: 'https://github.com/Peiiii/nextclaw' },
         ],
@@ -72,6 +73,12 @@ export default defineConfig({
                     items: [
                         { text: 'Commands', link: '/guide/commands' },
                         { text: 'Troubleshooting', link: '/guide/troubleshooting' },
+                    ]
+                },
+                {
+                    text: 'Project',
+                    items: [
+                        { text: 'Roadmap', link: '/guide/roadmap' },
                     ]
                 }
             ]
