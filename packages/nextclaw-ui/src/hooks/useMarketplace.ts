@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
+import { t } from '@/lib/i18n';
 import {
   fetchMarketplaceItem,
   fetchMarketplaceInstalled,
@@ -53,10 +54,10 @@ export function useInstallMarketplaceItem() {
       queryClient.invalidateQueries({ queryKey: ['marketplace-installed'] });
       queryClient.refetchQueries({ queryKey: ['marketplace-installed'], type: 'active' });
       queryClient.refetchQueries({ queryKey: ['marketplace-items'], type: 'active' });
-      toast.success(result.message || `${result.type} installed`);
+      toast.success(result.message || `${result.type} ${t('marketplaceInstalledCountSuffix')}`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Install failed');
+      toast.error(error.message || t('marketplaceInstallFailed'));
     }
   });
 }
@@ -74,7 +75,7 @@ export function useManageMarketplaceItem() {
       toast.success(result.message || `${result.action} success`);
     },
     onError: (error: Error) => {
-      toast.error(error.message || 'Operation failed');
+      toast.error(error.message || t('marketplaceOperationFailed'));
     }
   });
 }

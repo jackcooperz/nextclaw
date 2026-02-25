@@ -7,31 +7,20 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { t } from '@/lib/i18n';
+import { formatDateTime, t } from '@/lib/i18n';
 import { AlarmClock, RefreshCw, Trash2, Play, Power } from 'lucide-react';
 
 type StatusFilter = 'all' | 'enabled' | 'disabled';
 
 function formatDate(value?: string | null): string {
-  if (!value) {
-    return '-';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
+  return formatDateTime(value ?? undefined);
 }
 
 function formatDateFromMs(value?: number | null): string {
   if (typeof value !== 'number' || !Number.isFinite(value)) {
     return '-';
   }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-  return date.toLocaleString();
+  return formatDateTime(new Date(value));
 }
 
 function formatEveryDuration(ms?: number | null): string {

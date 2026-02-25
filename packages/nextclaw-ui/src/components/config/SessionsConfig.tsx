@@ -6,20 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
-import { t } from '@/lib/i18n';
+import { formatDateShort, formatDateTime, t } from '@/lib/i18n';
 import { RefreshCw, Search, Clock, Inbox, Hash, Bot, User, MessageCircle, Settings as SettingsIcon } from 'lucide-react';
 
 const UNKNOWN_CHANNEL_KEY = '__unknown_channel__';
 
 function formatDate(value?: string): string {
-  if (!value) {
-    return '-';
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) {
-    return value;
-  }
-  return date.toLocaleString();
+  return formatDateTime(value);
 }
 
 function resolveChannelFromSessionKey(key: string): string {
@@ -75,7 +68,7 @@ function SessionListItem({ session, channel, isSelected, onSelect }: SessionList
       <div className={cn("flex items-center text-xs justify-between mt-2 font-medium", isSelected ? "text-brand-600/80" : "text-gray-400")}>
         <div className="flex items-center gap-1.5">
           <Clock className="w-3.5 h-3.5 opacity-70" />
-          <span className="truncate max-w-[100px]">{formatDate(session.updatedAt).split(' ')[0]}</span>
+          <span className="truncate max-w-[100px]">{formatDateShort(session.updatedAt)}</span>
         </div>
         <div className="flex items-center gap-1">
           <MessageCircle className="w-3.5 h-3.5 opacity-70" />
@@ -248,10 +241,10 @@ export function SessionsConfig() {
 
             <Select value={selectedChannel} onValueChange={setSelectedChannel}>
               <SelectTrigger className="w-full h-8.5 rounded-lg bg-gray-50/50 hover:bg-gray-100 border-gray-200 focus:ring-0 shadow-none text-xs font-medium text-gray-700">
-                <SelectValue placeholder="All Channels" />
+                <SelectValue placeholder={t('sessionsAllChannels')} />
               </SelectTrigger>
               <SelectContent className="rounded-xl shadow-lg border-gray-100 max-w-[280px]">
-                <SelectItem value="all" className="rounded-lg text-xs">All Channels</SelectItem>
+                <SelectItem value="all" className="rounded-lg text-xs">{t('sessionsAllChannels')}</SelectItem>
                 {channels.map(c => (
                   <SelectItem key={c} value={c} className="rounded-lg text-xs truncate pr-6">{displayChannelName(c)}</SelectItem>
                 ))}
@@ -326,7 +319,7 @@ export function SessionsConfig() {
                   <div className="flex items-center gap-2 shrink-0">
                     <Button variant="outline" size="sm" onClick={() => setIsEditingMeta(!isEditingMeta)} className={cn("h-8.5 rounded-lg shadow-none border-gray-200 transition-all text-xs font-semibold", isEditingMeta ? "bg-gray-100 text-gray-900" : "hover:bg-gray-50 hover:text-gray-900")}>
                       <SettingsIcon className="w-3.5 h-3.5 mr-1.5" />
-                      Metadata
+                      {t('sessionsMetadata')}
                     </Button>
                     <Button variant="outline" size="sm" onClick={handleClearHistory} className="h-8.5 rounded-lg shadow-none hover:bg-gray-50 hover:text-gray-900 border-gray-200 text-xs font-semibold text-gray-500">
                       {t('sessionsClearHistory')}
@@ -397,9 +390,9 @@ export function SessionsConfig() {
               <div className="w-20 h-20 bg-gray-50 rounded-3xl flex items-center justify-center mb-6 border border-gray-100 shadow-[0_2px_8px_-2px_rgba(0,0,0,0.02)] rotate-3">
                 <Inbox className="h-8 w-8 text-gray-300 -rotate-3" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-2">No Session Selected</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">{t('sessionsNoSelectionTitle')}</h3>
               <p className="text-sm text-center max-w-sm leading-relaxed">
-                Select a session from the list on the left to view its chat history and configure its metadata.
+                {t('sessionsNoSelectionDescription')}
               </p>
             </div>
           )}

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { t } from '@/lib/i18n';
 
 interface TagInputProps {
   value: string[];
@@ -9,7 +10,7 @@ interface TagInputProps {
   placeholder?: string;
 }
 
-export function TagInput({ value, onChange, className, placeholder = 'Type and press Enter...' }: TagInputProps) {
+export function TagInput({ value, onChange, className, placeholder = '' }: TagInputProps) {
   const [input, setInput] = useState('');
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -49,7 +50,7 @@ export function TagInput({ value, onChange, className, placeholder = 'Type and p
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={handleKeyDown}
         className="flex-1 outline-none min-w-[100px] bg-transparent text-sm"
-        placeholder={placeholder}
+        placeholder={placeholder || t('enterTag')}
       />
     </div>
   );

@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { hintForPath } from '@/lib/config-hints';
+import { t } from '@/lib/i18n';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -129,7 +130,7 @@ export function RuntimeConfig() {
       const normalizedAgents = agents.map((agent, index) => {
         const id = agent.id.trim();
         if (!id) {
-          throw new Error(`agents.list[${index}].id is required`);
+          throw new Error(t('agentIdRequiredError').replace('{index}', String(index)));
         }
         const normalized: AgentProfileView = { id };
         if (agent.default) {
@@ -157,7 +158,7 @@ export function RuntimeConfig() {
         .map((agent) => agent.id)
         .filter((id, index, all) => all.indexOf(id) !== index);
       if (duplicates.length > 0) {
-        toast.error(`Duplicate agent id: ${duplicates[0]}`);
+        toast.error(`${t('duplicateAgentId')}: ${duplicates[0]}`);
         return;
       }
 
@@ -169,13 +170,13 @@ export function RuntimeConfig() {
         const peerId = binding.match.peer?.id?.trim() ?? '';
 
         if (!agentId) {
-          throw new Error(`bindings[${index}].agentId is required`);
+          throw new Error(t('bindingAgentIdRequired').replace('{index}', String(index)));
         }
         if (!knownAgentIds.has(agentId)) {
-          throw new Error(`bindings[${index}].agentId '${agentId}' not found in agents.list/main`);
+          throw new Error(`${t('bindingAgentIdNotFound').replace('{index}', String(index))}: ${agentId}`);
         }
         if (!channel) {
-          throw new Error(`bindings[${index}].match.channel is required`);
+          throw new Error(t('bindingChannelRequired').replace('{index}', String(index)));
         }
 
         const normalized: AgentBindingView = {
@@ -191,7 +192,7 @@ export function RuntimeConfig() {
 
         if (peerKind) {
           if (!peerId) {
-            throw new Error(`bindings[${index}].match.peer.id is required when peer.kind is set`);
+            throw new Error(t('bindingPeerIdRequired').replace('{index}', String(index)));
           }
           normalized.match.peer = {
             kind: peerKind,
@@ -226,27 +227,27 @@ export function RuntimeConfig() {
   };
 
   if (isLoading || !config) {
-    return <div className="p-8 text-gray-400">Loading runtime settings...</div>;
+    return <div className="p-8 text-gray-400">{t('runtimeLoading')}</div>;
   }
 
   return (
     <div className="space-y-6 pb-20 animate-fade-in">
       <div>
-        <h2 className="text-xl font-semibold text-gray-900">Routing & Runtime</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('runtimePageTitle')}</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Align multi-agent routing with OpenClaw: bindings, agent pool, and DM scope.
+          {t('runtimePageDescription')}
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>{dmScopeHint?.label ?? 'DM Scope'}</CardTitle>
-          <CardDescription>{dmScopeHint?.help ?? 'Control how direct-message sessions are isolated.'}</CardDescription>
+          <CardTitle>{dmScopeHint?.label ?? t('dmScope')}</CardTitle>
+          <CardDescription>{dmScopeHint?.help ?? t('dmScopeHelp')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-800">
-              {defaultContextTokensHint?.label ?? 'Default Context Tokens'}
+              {defaultContextTokensHint?.label ?? t('defaultContextTokens')}
             </label>
             <Input
               type="number"
@@ -256,11 +257,11 @@ export function RuntimeConfig() {
               onChange={(event) => setDefaultContextTokens(Math.max(1000, Number.parseInt(event.target.value, 10) || 1000))}
             />
             <p className="text-xs text-gray-500">
-              {defaultContextTokensHint?.help ?? 'Input context budget for agents when no per-agent override is set.'}
+              {defaultContextTokensHint?.help ?? t('defaultContextTokensHelp')}
             </p>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium text-gray-800">{dmScopeHint?.label ?? 'DM Scope'}</label>
+            <label className="text-sm font-medium text-gray-800">{dmScopeHint?.label ?? t('dmScope')}</label>
             <Select value={dmScope} onValueChange={(v) => setDmScope(v as DmScope)}>
               <SelectTrigger>
                 <SelectValue />
@@ -276,7 +277,7 @@ export function RuntimeConfig() {
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-800">
-              {maxPingHint?.label ?? 'Max Ping-Pong Turns'}
+              {maxPingHint?.label ?? t('maxPingPongTurns')}
             </label>
             <Input
               type="number"
@@ -286,7 +287,7 @@ export function RuntimeConfig() {
               onChange={(event) => setMaxPingPongTurns(Math.max(0, Number.parseInt(event.target.value, 10) || 0))}
             />
             <p className="text-xs text-gray-500">
-              {maxPingHint?.help ?? 'Set to 0 to block automatic agent-to-agent ping-pong loops.'}
+              {maxPingHint?.help ?? t('maxPingPongTurnsHelp')}
             </p>
           </div>
         </CardContent>
@@ -294,8 +295,8 @@ export function RuntimeConfig() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{agentsHint?.label ?? 'Agent List'}</CardTitle>
-          <CardDescription>{agentsHint?.help ?? 'Run multiple fixed-role agents in one gateway process.'}</CardDescription>
+          <CardTitle>{agentsHint?.label ?? t('agentList')}</CardTitle>
+          <CardDescription>{agentsHint?.help ?? t('agentListHelp')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {agents.map((agent, index) => (
@@ -304,17 +305,17 @@ export function RuntimeConfig() {
                 <Input
                   value={agent.id}
                   onChange={(event) => updateAgent(index, { id: event.target.value })}
-                  placeholder="Agent ID (e.g. engineer)"
+                  placeholder={t('agentIdPlaceholder')}
                 />
                 <Input
                   value={agent.workspace ?? ''}
                   onChange={(event) => updateAgent(index, { workspace: event.target.value })}
-                  placeholder="Workspace override (optional)"
+                  placeholder={t('workspaceOverridePlaceholder')}
                 />
                 <Input
                   value={agent.model ?? ''}
                   onChange={(event) => updateAgent(index, { model: event.target.value })}
-                  placeholder="Model override (optional)"
+                  placeholder={t('modelOverridePlaceholder')}
                 />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                   <Input
@@ -326,7 +327,7 @@ export function RuntimeConfig() {
                         maxTokens: parseOptionalInt(event.target.value)
                       })
                     }
-                    placeholder="Max tokens"
+                    placeholder={t('maxTokensPlaceholder')}
                   />
                   <Input
                     type="number"
@@ -338,7 +339,7 @@ export function RuntimeConfig() {
                         contextTokens: parseOptionalInt(event.target.value)
                       })
                     }
-                    placeholder={agentContextTokensHint?.label ?? 'Context tokens'}
+                    placeholder={agentContextTokensHint?.label ?? t('contextTokensPlaceholder')}
                   />
                   <Input
                     type="number"
@@ -349,7 +350,7 @@ export function RuntimeConfig() {
                         maxToolIterations: parseOptionalInt(event.target.value)
                       })
                     }
-                    placeholder="Max tools"
+                    placeholder={t('maxToolsPlaceholder')}
                   />
                 </div>
               </div>
@@ -370,11 +371,11 @@ export function RuntimeConfig() {
                       );
                     }}
                   />
-                  <span>Default agent</span>
+                  <span>{t('defaultAgent')}</span>
                 </div>
                 <Button type="button" variant="outline" size="sm" onClick={() => setAgents((prev) => prev.filter((_, cursor) => cursor !== index))}>
                   <Trash2 className="h-4 w-4 mr-1" />
-                  Remove
+                  {t('remove')}
                 </Button>
               </div>
             </div>
@@ -382,16 +383,16 @@ export function RuntimeConfig() {
 
           <Button type="button" variant="outline" onClick={() => setAgents((prev) => [...prev, createEmptyAgent()])}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Agent
+            {t('addAgent')}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>{bindingsHint?.label ?? 'Bindings'}</CardTitle>
+          <CardTitle>{bindingsHint?.label ?? t('bindings')}</CardTitle>
           <CardDescription>
-            {bindingsHint?.help ?? 'Route inbound message by channel + account + peer to target agent.'}
+            {bindingsHint?.help ?? t('bindingsHelp')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -403,7 +404,7 @@ export function RuntimeConfig() {
                   <Input
                     value={binding.agentId}
                     onChange={(event) => updateBinding(index, { ...binding, agentId: event.target.value })}
-                    placeholder="Target agent ID"
+                    placeholder={t('targetAgentIdPlaceholder')}
                   />
                   <Input
                     value={binding.match.channel}
@@ -416,7 +417,7 @@ export function RuntimeConfig() {
                         }
                       })
                     }
-                    placeholder="Channel (e.g. discord)"
+                    placeholder={t('channelPlaceholder')}
                   />
                   <Input
                     value={binding.match.accountId ?? ''}
@@ -429,7 +430,7 @@ export function RuntimeConfig() {
                         }
                       })
                     }
-                    placeholder="Account ID (optional)"
+                    placeholder={t('accountIdOptionalPlaceholder')}
                   />
                   <Select
                     value={peerKind || '__none__'}
@@ -461,7 +462,7 @@ export function RuntimeConfig() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="__none__">Peer kind (optional)</SelectItem>
+                      <SelectItem value="__none__">{t('peerKindOptional')}</SelectItem>
                       <SelectItem value="direct">direct</SelectItem>
                       <SelectItem value="group">group</SelectItem>
                       <SelectItem value="channel">channel</SelectItem>
@@ -483,7 +484,7 @@ export function RuntimeConfig() {
                         }
                       })
                     }
-                    placeholder="Peer ID (requires peer kind)"
+                    placeholder={t('peerIdPlaceholder')}
                   />
                 </div>
                 <div className="flex justify-end">
@@ -494,7 +495,7 @@ export function RuntimeConfig() {
                     onClick={() => setBindings((prev) => prev.filter((_, cursor) => cursor !== index))}
                   >
                     <Trash2 className="h-4 w-4 mr-1" />
-                    Remove
+                    {t('remove')}
                   </Button>
                 </div>
               </div>
@@ -503,7 +504,7 @@ export function RuntimeConfig() {
 
           <Button type="button" variant="outline" onClick={() => setBindings((prev) => [...prev, createEmptyBinding()])}>
             <Plus className="h-4 w-4 mr-2" />
-            Add Binding
+            {t('addBinding')}
           </Button>
         </CardContent>
       </Card>
@@ -511,7 +512,7 @@ export function RuntimeConfig() {
       <div className="flex justify-end">
         <Button type="button" onClick={handleSave} disabled={updateRuntime.isPending}>
           <Save className="h-4 w-4 mr-2" />
-          {updateRuntime.isPending ? 'Saving...' : 'Save Runtime Settings'}
+          {updateRuntime.isPending ? t('saving') : t('saveRuntimeSettings')}
         </Button>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
+import { formatNumber } from '@/lib/i18n';
 
 interface Tab {
     id: string;
@@ -35,7 +36,7 @@ export function Tabs({ tabs, activeTab, onChange, className }: TabsProps) {
                             <span className={cn(
                                 'text-[11px] font-medium',
                                 isActive ? 'text-gray-500' : 'text-gray-500'
-                            )}>{tab.count.toLocaleString()}</span>
+                            )}>{formatNumber(tab.count)}</span>
                         )}
                         {isActive && (
                             <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary rounded-full" />

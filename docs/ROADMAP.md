@@ -18,6 +18,7 @@ This document describes NextClaw’s direction and current priorities for users 
 
 ### 3. UI and experience
 
+- **In-app chat**: Support direct conversation with the AI in the UI (in addition to config-only flows).
 - Ongoing config UI improvements per [nextclaw-ui-design-brief](nextclaw-ui-design-brief.md): layout, interactions, feedback.
 - Information architecture and flows for Sessions, Routing & Runtime, Cron, Marketplace, etc.
 - Consistent, friendly experience for loading, saving, and error states.

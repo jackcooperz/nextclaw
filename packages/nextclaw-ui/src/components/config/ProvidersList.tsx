@@ -11,6 +11,7 @@ import { hintForPath } from '@/lib/config-hints';
 import { ConfigCard, ConfigCardHeader, ConfigCardBody, ConfigCardFooter } from '@/components/ui/config-card';
 import { StatusDot } from '@/components/ui/status-dot';
 import { ActionLink } from '@/components/ui/action-link';
+import { t } from '@/lib/i18n';
 
 export function ProvidersList() {
   const { data: config } = useConfig();
@@ -21,12 +22,12 @@ export function ProvidersList() {
   const uiHints = schema?.uiHints;
 
   if (!config || !meta) {
-    return <div className="p-8">Loading...</div>;
+    return <div className="p-8">{t('providersLoading')}</div>;
   }
 
   const tabs = [
-    { id: 'installed', label: 'Configured', count: config.providers ? Object.keys(config.providers).filter(k => config.providers[k].apiKeySet).length : 0 },
-    { id: 'all', label: 'All Providers' }
+    { id: 'installed', label: t('providersTabConfigured'), count: config.providers ? Object.keys(config.providers).filter(k => config.providers[k].apiKeySet).length : 0 },
+    { id: 'all', label: t('providersTabAll'), count: meta.providers.length }
   ];
 
   const filteredProviders = activeTab === 'installed'
@@ -36,7 +37,7 @@ export function ProvidersList() {
   return (
     <div className="animate-fade-in pb-20">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">AI Providers</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('providersPageTitle')}</h2>
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -47,7 +48,7 @@ export function ProvidersList() {
           const providerConfig = config.providers[provider.name];
           const hasConfig = providerConfig?.apiKeySet;
           const providerHint = hintForPath(`providers.${provider.name}`, uiHints);
-          const description = providerHint?.help || 'Configure AI services for your agents';
+          const description = providerHint?.help || t('providersDefaultDescription');
 
           return (
             <ConfigCard key={provider.name} onClick={() => openProviderModal(provider.name)}>
@@ -73,7 +74,7 @@ export function ProvidersList() {
                 />
                 <StatusDot
                   status={hasConfig ? 'ready' : 'setup'}
-                  label={hasConfig ? 'Ready' : 'Setup'}
+                  label={hasConfig ? t('statusReady') : t('statusSetup')}
                 />
               </ConfigCardHeader>
 
@@ -83,7 +84,7 @@ export function ProvidersList() {
               />
 
               <ConfigCardFooter>
-                <ActionLink label={hasConfig ? 'Configure' : 'Add Provider'} />
+                <ActionLink label={hasConfig ? t('actionConfigure') : t('actionAddProvider')} />
               </ConfigCardFooter>
             </ConfigCard>
           );
@@ -97,10 +98,10 @@ export function ProvidersList() {
             <KeyRound className="h-6 w-6 text-gray-300" />
           </div>
           <h3 className="text-[14px] font-semibold text-gray-900 mb-1.5">
-            No providers configured
+            {t('providersEmptyTitle')}
           </h3>
           <p className="text-[13px] text-gray-400 max-w-sm">
-            Add an AI provider to start using the platform.
+            {t('providersEmptyDescription')}
           </p>
         </div>
       )}

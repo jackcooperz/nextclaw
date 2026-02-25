@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useConfig, useConfigSchema, useUpdateChannel, useExecuteConfigAction } from '@/hooks/useConfig';
 import { useUiStore } from '@/stores/ui.store';
 import {
@@ -65,102 +65,103 @@ const getFieldIcon = (fieldName: string) => {
   return <Settings className="h-3.5 w-3.5 text-gray-500" />;
 };
 
-// Channel field definitions
-const CHANNEL_FIELDS: Record<string, ChannelField[]> = {
-  telegram: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'token', type: 'password', label: t('botToken') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') },
-    { name: 'proxy', type: 'text', label: t('proxy') },
-    { name: 'accountId', type: 'text', label: 'Account ID' },
-    { name: 'dmPolicy', type: 'select', label: 'DM Policy', options: DM_POLICY_OPTIONS },
-    { name: 'groupPolicy', type: 'select', label: 'Group Policy', options: GROUP_POLICY_OPTIONS },
-    { name: 'groupAllowFrom', type: 'tags', label: 'Group Allow From' },
-    { name: 'requireMention', type: 'boolean', label: 'Require Mention' },
-    { name: 'mentionPatterns', type: 'tags', label: 'Mention Patterns' },
-    { name: 'groups', type: 'json', label: 'Group Rules (JSON)' }
-  ],
-  discord: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'token', type: 'password', label: t('botToken') },
-    { name: 'allowBots', type: 'boolean', label: 'Allow Bot Messages' },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') },
-    { name: 'gatewayUrl', type: 'text', label: t('gatewayUrl') },
-    { name: 'intents', type: 'number', label: t('intents') },
-    { name: 'proxy', type: 'text', label: t('proxy') },
-    { name: 'mediaMaxMb', type: 'number', label: 'Attachment Max Size (MB)' },
-    { name: 'streaming', type: 'select', label: 'Streaming Mode', options: STREAMING_MODE_OPTIONS },
-    { name: 'draftChunk', type: 'json', label: 'Draft Chunking (JSON)' },
-    { name: 'textChunkLimit', type: 'number', label: 'Text Chunk Limit' },
-    { name: 'accountId', type: 'text', label: 'Account ID' },
-    { name: 'dmPolicy', type: 'select', label: 'DM Policy', options: DM_POLICY_OPTIONS },
-    { name: 'groupPolicy', type: 'select', label: 'Group Policy', options: GROUP_POLICY_OPTIONS },
-    { name: 'groupAllowFrom', type: 'tags', label: 'Group Allow From' },
-    { name: 'requireMention', type: 'boolean', label: 'Require Mention' },
-    { name: 'mentionPatterns', type: 'tags', label: 'Mention Patterns' },
-    { name: 'groups', type: 'json', label: 'Group Rules (JSON)' }
-  ],
-  whatsapp: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'bridgeUrl', type: 'text', label: t('bridgeUrl') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
-  ],
-  feishu: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'appId', type: 'text', label: t('appId') },
-    { name: 'appSecret', type: 'password', label: t('appSecret') },
-    { name: 'encryptKey', type: 'password', label: t('encryptKey') },
-    { name: 'verificationToken', type: 'password', label: t('verificationToken') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
-  ],
-  dingtalk: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'clientId', type: 'text', label: t('clientId') },
-    { name: 'clientSecret', type: 'password', label: t('clientSecret') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
-  ],
-  wecom: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'corpId', type: 'text', label: t('corpId') },
-    { name: 'agentId', type: 'text', label: t('agentId') },
-    { name: 'secret', type: 'password', label: t('secret') },
-    { name: 'token', type: 'password', label: t('token') },
-    { name: 'callbackPort', type: 'number', label: t('callbackPort') },
-    { name: 'callbackPath', type: 'text', label: t('callbackPath') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
-  ],
-  slack: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'mode', type: 'text', label: t('mode') },
-    { name: 'webhookPath', type: 'text', label: t('webhookPath') },
-    { name: 'allowBots', type: 'boolean', label: 'Allow Bot Messages' },
-    { name: 'botToken', type: 'password', label: t('botToken') },
-    { name: 'appToken', type: 'password', label: t('appToken') }
-  ],
-  email: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'consentGranted', type: 'boolean', label: t('consentGranted') },
-    { name: 'imapHost', type: 'text', label: t('imapHost') },
-    { name: 'imapPort', type: 'number', label: t('imapPort') },
-    { name: 'imapUsername', type: 'text', label: t('imapUsername') },
-    { name: 'imapPassword', type: 'password', label: t('imapPassword') },
-    { name: 'fromAddress', type: 'email', label: t('fromAddress') }
-  ],
-  mochat: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'baseUrl', type: 'text', label: t('baseUrl') },
-    { name: 'clawToken', type: 'password', label: t('clawToken') },
-    { name: 'agentUserId', type: 'text', label: t('agentUserId') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
-  ],
-  qq: [
-    { name: 'enabled', type: 'boolean', label: t('enabled') },
-    { name: 'appId', type: 'text', label: t('appId') },
-    { name: 'secret', type: 'password', label: t('appSecret') },
-    { name: 'markdownSupport', type: 'boolean', label: t('markdownSupport') },
-    { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
-  ]
-};
+function buildChannelFields(): Record<string, ChannelField[]> {
+  return {
+    telegram: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'token', type: 'password', label: t('botToken') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') },
+      { name: 'proxy', type: 'text', label: t('proxy') },
+      { name: 'accountId', type: 'text', label: t('accountId') },
+      { name: 'dmPolicy', type: 'select', label: t('dmPolicy'), options: DM_POLICY_OPTIONS },
+      { name: 'groupPolicy', type: 'select', label: t('groupPolicy'), options: GROUP_POLICY_OPTIONS },
+      { name: 'groupAllowFrom', type: 'tags', label: t('groupAllowFrom') },
+      { name: 'requireMention', type: 'boolean', label: t('requireMention') },
+      { name: 'mentionPatterns', type: 'tags', label: t('mentionPatterns') },
+      { name: 'groups', type: 'json', label: t('groupRulesJson') }
+    ],
+    discord: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'token', type: 'password', label: t('botToken') },
+      { name: 'allowBots', type: 'boolean', label: t('allowBotMessages') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') },
+      { name: 'gatewayUrl', type: 'text', label: t('gatewayUrl') },
+      { name: 'intents', type: 'number', label: t('intents') },
+      { name: 'proxy', type: 'text', label: t('proxy') },
+      { name: 'mediaMaxMb', type: 'number', label: t('attachmentMaxSizeMb') },
+      { name: 'streaming', type: 'select', label: t('streamingMode'), options: STREAMING_MODE_OPTIONS },
+      { name: 'draftChunk', type: 'json', label: t('draftChunkingJson') },
+      { name: 'textChunkLimit', type: 'number', label: t('textChunkLimit') },
+      { name: 'accountId', type: 'text', label: t('accountId') },
+      { name: 'dmPolicy', type: 'select', label: t('dmPolicy'), options: DM_POLICY_OPTIONS },
+      { name: 'groupPolicy', type: 'select', label: t('groupPolicy'), options: GROUP_POLICY_OPTIONS },
+      { name: 'groupAllowFrom', type: 'tags', label: t('groupAllowFrom') },
+      { name: 'requireMention', type: 'boolean', label: t('requireMention') },
+      { name: 'mentionPatterns', type: 'tags', label: t('mentionPatterns') },
+      { name: 'groups', type: 'json', label: t('groupRulesJson') }
+    ],
+    whatsapp: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'bridgeUrl', type: 'text', label: t('bridgeUrl') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
+    ],
+    feishu: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'appId', type: 'text', label: t('appId') },
+      { name: 'appSecret', type: 'password', label: t('appSecret') },
+      { name: 'encryptKey', type: 'password', label: t('encryptKey') },
+      { name: 'verificationToken', type: 'password', label: t('verificationToken') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
+    ],
+    dingtalk: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'clientId', type: 'text', label: t('clientId') },
+      { name: 'clientSecret', type: 'password', label: t('clientSecret') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
+    ],
+    wecom: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'corpId', type: 'text', label: t('corpId') },
+      { name: 'agentId', type: 'text', label: t('agentId') },
+      { name: 'secret', type: 'password', label: t('secret') },
+      { name: 'token', type: 'password', label: t('token') },
+      { name: 'callbackPort', type: 'number', label: t('callbackPort') },
+      { name: 'callbackPath', type: 'text', label: t('callbackPath') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
+    ],
+    slack: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'mode', type: 'text', label: t('mode') },
+      { name: 'webhookPath', type: 'text', label: t('webhookPath') },
+      { name: 'allowBots', type: 'boolean', label: t('allowBotMessages') },
+      { name: 'botToken', type: 'password', label: t('botToken') },
+      { name: 'appToken', type: 'password', label: t('appToken') }
+    ],
+    email: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'consentGranted', type: 'boolean', label: t('consentGranted') },
+      { name: 'imapHost', type: 'text', label: t('imapHost') },
+      { name: 'imapPort', type: 'number', label: t('imapPort') },
+      { name: 'imapUsername', type: 'text', label: t('imapUsername') },
+      { name: 'imapPassword', type: 'password', label: t('imapPassword') },
+      { name: 'fromAddress', type: 'email', label: t('fromAddress') }
+    ],
+    mochat: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'baseUrl', type: 'text', label: t('baseUrl') },
+      { name: 'clawToken', type: 'password', label: t('clawToken') },
+      { name: 'agentUserId', type: 'text', label: t('agentUserId') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
+    ],
+    qq: [
+      { name: 'enabled', type: 'boolean', label: t('enabled') },
+      { name: 'appId', type: 'text', label: t('appId') },
+      { name: 'secret', type: 'password', label: t('appSecret') },
+      { name: 'markdownSupport', type: 'boolean', label: t('markdownSupport') },
+      { name: 'allowFrom', type: 'tags', label: t('allowFrom') }
+    ]
+  };
+}
 
 const channelIcons: Record<string, typeof MessageCircle> = {
   telegram: MessageCircle,
@@ -219,7 +220,7 @@ export function ChannelForm() {
 
   const channelName = channelModal.channel;
   const channelConfig = channelName ? config?.channels[channelName] : null;
-  const fields = useMemo(() => (channelName ? CHANNEL_FIELDS[channelName] : []), [channelName]);
+  const fields = channelName ? buildChannelFields()[channelName] ?? [] : [];
   const uiHints = schema?.uiHints;
   const scope = channelName ? `channels.${channelName}` : null;
   const actions = schema?.actions?.filter((action) => action.scope === scope) ?? [];
@@ -231,7 +232,8 @@ export function ChannelForm() {
     if (channelConfig) {
       setFormData({ ...channelConfig });
       const nextDrafts: Record<string, string> = {};
-      fields
+      const currentFields = channelName ? buildChannelFields()[channelName] ?? [] : [];
+      currentFields
         .filter((field) => field.type === 'json')
         .forEach((field) => {
           const value = channelConfig[field.name];
@@ -242,7 +244,7 @@ export function ChannelForm() {
       setFormData({});
       setJsonDrafts({});
     }
-  }, [channelConfig, channelName, fields]);
+  }, [channelConfig, channelName]);
 
   const updateField = (name: string, value: unknown) => {
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -262,7 +264,7 @@ export function ChannelForm() {
       try {
         payload[field.name] = raw.trim() ? JSON.parse(raw) : {};
       } catch {
-        toast.error(`Invalid JSON for ${field.name}`);
+        toast.error(`${t('invalidJson')}: ${field.name}`);
         return;
       }
     }
@@ -342,7 +344,7 @@ export function ChannelForm() {
             </div>
             <div>
               <DialogTitle className="capitalize">{channelLabel}</DialogTitle>
-              <DialogDescription>Configure message channel parameters</DialogDescription>
+              <DialogDescription>{t('configureMessageChannelParameters')}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -397,7 +399,7 @@ export function ChannelForm() {
                       type="password"
                       value={(formData[field.name] as string) || ''}
                       onChange={(e) => updateField(field.name, e.target.value)}
-                      placeholder={placeholder ?? 'Leave blank to keep unchanged'}
+                      placeholder={placeholder ?? t('leaveBlankToKeepUnchanged')}
                       className="rounded-xl"
                     />
                   )}
@@ -468,7 +470,7 @@ export function ChannelForm() {
               type="submit"
               disabled={updateChannel.isPending || Boolean(runningActionId)}
             >
-              {updateChannel.isPending ? 'Saving...' : t('save')}
+              {updateChannel.isPending ? t('saving') : t('save')}
             </Button>
             {actions
               .filter((action) => action.trigger === 'manual')

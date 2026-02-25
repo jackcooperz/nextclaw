@@ -8,6 +8,7 @@ import {
   DialogTitle
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
+import { t } from '@/lib/i18n';
 
 export type ConfirmDialogVariant = 'default' | 'destructive';
 
@@ -28,8 +29,8 @@ export const ConfirmDialog = ({
   onOpenChange,
   title,
   description,
-  confirmLabel = 'Confirm',
-  cancelLabel = 'Cancel',
+  confirmLabel = t('confirm'),
+  cancelLabel = t('cancel'),
   variant = 'default',
   onConfirm,
   onCancel

@@ -1,5 +1,5 @@
 import { useConfig, useConfigMeta, useConfigSchema } from '@/hooks/useConfig';
-import { MessageCircle, Mail, MessageSquare, Slack, ExternalLink, Bell, ArrowRight } from 'lucide-react';
+import { MessageCircle, Mail, MessageSquare, Slack, ExternalLink, Bell } from 'lucide-react';
 import { useState } from 'react';
 import { ChannelForm } from './ChannelForm';
 import { useUiStore } from '@/stores/ui.store';
@@ -11,6 +11,7 @@ import { ConfigCard, ConfigCardHeader, ConfigCardBody, ConfigCardFooter } from '
 import { StatusDot } from '@/components/ui/status-dot';
 import { ActionLink } from '@/components/ui/action-link';
 import { cn } from '@/lib/utils';
+import { t } from '@/lib/i18n';
 
 const channelIcons: Record<string, typeof MessageCircle> = {
   telegram: MessageCircle,
@@ -20,13 +21,13 @@ const channelIcons: Record<string, typeof MessageCircle> = {
   default: MessageSquare
 };
 
-const channelDescriptions: Record<string, string> = {
-  telegram: 'Connect with Telegram bots for instant messaging',
-  slack: 'Integrate with Slack workspaces for team collaboration',
-  email: 'Send and receive messages via email protocols',
-  webhook: 'Receive HTTP webhooks for custom integrations',
-  discord: 'Connect Discord bots to your community servers',
-  feishu: 'Enterprise messaging and collaboration platform'
+const channelDescriptionKeys: Record<string, string> = {
+  telegram: 'channelDescTelegram',
+  slack: 'channelDescSlack',
+  email: 'channelDescEmail',
+  webhook: 'channelDescWebhook',
+  discord: 'channelDescDiscord',
+  feishu: 'channelDescFeishu'
 };
 
 export function ChannelsList() {
@@ -38,12 +39,12 @@ export function ChannelsList() {
   const uiHints = schema?.uiHints;
 
   if (!config || !meta) {
-    return <div className="p-8 text-gray-400">Loading channels...</div>;
+    return <div className="p-8 text-gray-400">{t('channelsLoading')}</div>;
   }
 
   const tabs = [
-    { id: 'active', label: 'Enabled', count: meta.channels.filter(c => config.channels[c.name]?.enabled).length },
-    { id: 'all', label: 'All Channels', count: meta.channels.length }
+    { id: 'active', label: t('channelsTabEnabled'), count: meta.channels.filter(c => config.channels[c.name]?.enabled).length },
+    { id: 'all', label: t('channelsTabAll'), count: meta.channels.length }
   ];
 
   const filteredChannels = meta.channels.filter(channel => {
@@ -54,7 +55,7 @@ export function ChannelsList() {
   return (
     <div className="animate-fade-in pb-20">
       <div className="flex items-center justify-between mb-6">
-        <h2 className="text-xl font-semibold text-gray-900">Message Channels</h2>
+        <h2 className="text-xl font-semibold text-gray-900">{t('channelsPageTitle')}</h2>
       </div>
 
       <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
@@ -68,8 +69,7 @@ export function ChannelsList() {
           const channelHint = hintForPath(`channels.${channel.name}`, uiHints);
           const description =
             channelHint?.help ||
-            channelDescriptions[channel.name] ||
-            'Configure this communication channel';
+            t(channelDescriptionKeys[channel.name] || 'channelDescriptionDefault');
 
           return (
             <ConfigCard key={channel.name} onClick={() => openChannelModal(channel.name)}>
@@ -88,7 +88,7 @@ export function ChannelsList() {
                 />
                 <StatusDot
                   status={enabled ? 'active' : 'inactive'}
-                  label={enabled ? 'Active' : 'Inactive'}
+                  label={enabled ? t('statusActive') : t('statusInactive')}
                 />
               </ConfigCardHeader>
 
@@ -98,7 +98,7 @@ export function ChannelsList() {
               />
 
               <ConfigCardFooter>
-                <ActionLink label={enabled ? 'Configure' : 'Enable'} />
+                <ActionLink label={enabled ? t('actionConfigure') : t('actionEnable')} />
                 {channel.tutorialUrl && (
                   <a
                     href={channel.tutorialUrl}
@@ -106,7 +106,7 @@ export function ChannelsList() {
                     rel="noreferrer"
                     onClick={(e) => e.stopPropagation()}
                     className="flex items-center justify-center h-6 w-6 rounded-md text-gray-300 hover:text-gray-500 hover:bg-gray-100/60 transition-colors"
-                    title="View Guide"
+                    title={t('channelsGuideTitle')}
                   >
                     <ExternalLink className="h-3.5 w-3.5" />
                   </a>
@@ -124,10 +124,10 @@ export function ChannelsList() {
             <MessageSquare className="h-6 w-6 text-gray-300" />
           </div>
           <h3 className="text-[14px] font-semibold text-gray-900 mb-1.5">
-            No channels enabled
+            {t('channelsEmptyTitle')}
           </h3>
           <p className="text-[13px] text-gray-400 max-w-sm">
-            Enable a messaging channel to start receiving messages.
+            {t('channelsEmptyDescription')}
           </p>
         </div>
       )}

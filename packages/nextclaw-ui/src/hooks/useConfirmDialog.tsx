@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useCallback, useState } from 'react';
 import { ConfirmDialog } from '@/components/ui/confirm-dialog';
+import { t } from '@/lib/i18n';
 
 export type ConfirmOptions = {
   title: string;
@@ -24,8 +25,8 @@ const initial: ConfirmState = {
   open: false,
   title: '',
   description: '',
-  confirmLabel: 'Confirm',
-  cancelLabel: 'Cancel',
+  confirmLabel: t('confirm'),
+  cancelLabel: t('cancel'),
   variant: 'default',
   resolve: null
 };
@@ -42,8 +43,8 @@ export function useConfirmDialog(): {
         open: true,
         title: options.title,
         description: options.description ?? '',
-        confirmLabel: options.confirmLabel ?? 'Confirm',
-        cancelLabel: options.cancelLabel ?? 'Cancel',
+        confirmLabel: options.confirmLabel ?? t('confirm'),
+        cancelLabel: options.cancelLabel ?? t('cancel'),
         variant: options.variant ?? 'default',
         resolve: (value) => {
           resolve(value);

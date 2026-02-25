@@ -10,6 +10,7 @@ import {
   useMarketplaceInstalled,
   useMarketplaceItems
 } from '@/hooks/useMarketplace';
+import { t } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { PackageSearch } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
@@ -180,16 +181,16 @@ function FilterPanel(props: {
           <input
             value={props.searchText}
             onChange={(event) => props.onSearchTextChange(event.target.value)}
-            placeholder="Search extensions..."
+            placeholder={t('marketplaceSearchPlaceholder')}
             className="w-full h-9 border border-gray-200/80 rounded-xl pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary/40"
           />
         </div>
 
         <div className="inline-flex h-9 rounded-xl bg-gray-100/80 p-1 shrink-0">
           {([
-            { value: 'all', label: 'All' },
-            { value: 'plugin', label: 'Plugins' },
-            { value: 'skill', label: 'Skills' },
+            { value: 'all', label: t('marketplaceFilterAll') },
+            { value: 'plugin', label: t('marketplaceFilterPlugins') },
+            { value: 'skill', label: t('marketplaceFilterSkills') },
           ] as const).map((opt) => (
             <button
               key={opt.value}
@@ -213,8 +214,8 @@ function FilterPanel(props: {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="relevance">Relevance</SelectItem>
-              <SelectItem value="updated">Recently Updated</SelectItem>
+              <SelectItem value="relevance">{t('marketplaceSortRelevance')}</SelectItem>
+              <SelectItem value="updated">{t('marketplaceSortUpdated')}</SelectItem>
             </SelectContent>
           </Select>
         )}
@@ -234,8 +235,8 @@ function MarketplaceListCard(props: {
   const record = props.record;
   const pluginRecord = record?.type === 'plugin' ? record : undefined;
   const type = props.item?.type ?? record?.type;
-  const title = props.item?.name ?? record?.label ?? record?.id ?? record?.spec ?? 'Unknown Item';
-  const summary = props.item?.summary ?? (record ? 'Installed locally. Details are currently unavailable from marketplace.' : '');
+  const title = props.item?.name ?? record?.label ?? record?.id ?? record?.spec ?? t('marketplaceUnknownItem');
+  const summary = props.item?.summary ?? (record ? t('marketplaceInstalledLocalSummary') : '');
   const spec = props.item?.install.spec ?? record?.spec ?? '';
 
   const targetId = record?.id || record?.spec;
@@ -249,12 +250,12 @@ function MarketplaceListCard(props: {
   const isDisabled = record ? (record.enabled === false || record.runtimeStatus === 'disabled') : false;
   const isInstalling = props.installState.isPending && props.item && props.installState.installingSpec === props.item.install.spec;
 
-  const displayType = type === 'plugin' ? 'Plugin' : type === 'skill' ? 'Skill' : 'Extension';
+  const displayType = type === 'plugin' ? t('marketplaceTypePlugin') : type === 'skill' ? t('marketplaceTypeSkill') : t('marketplaceTypeExtension');
 
   return (
     <article className="group bg-white border border-gray-200/40 hover:border-gray-200/80 rounded-2xl px-5 py-4 hover:shadow-md shadow-sm transition-all flex items-start gap-3.5 justify-between cursor-default">
       <div className="flex gap-3 min-w-0 flex-1 h-full items-start">
-        <ItemIcon name={title} fallback={spec || 'Ext'} />
+        <ItemIcon name={title} fallback={spec || t('marketplaceTypeExtension')} />
         <div className="min-w-0 flex-1 flex flex-col justify-center h-full">
           <TooltipProvider delayDuration={400}>
             <Tooltip>
@@ -304,7 +305,7 @@ function MarketplaceListCard(props: {
             disabled={props.installState.isPending}
             className="inline-flex items-center gap-1.5 h-8 px-4 rounded-xl text-xs font-medium bg-primary text-white hover:bg-primary-600 disabled:opacity-50 transition-colors"
           >
-            {isInstalling ? 'Installing...' : 'Install'}
+            {isInstalling ? t('marketplaceInstalling') : t('marketplaceInstall')}
           </button>
         )}
 
@@ -315,8 +316,8 @@ function MarketplaceListCard(props: {
             className="inline-flex items-center h-8 px-4 rounded-xl text-xs font-medium border border-gray-200/80 text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-colors"
           >
             {busyForRecord && props.manageState.action !== 'uninstall'
-              ? (props.manageState.action === 'enable' ? 'Enabling...' : 'Disabling...')
-              : (isDisabled ? 'Enable' : 'Disable')}
+              ? (props.manageState.action === 'enable' ? t('marketplaceEnabling') : t('marketplaceDisabling'))
+              : (isDisabled ? t('marketplaceEnable') : t('marketplaceDisable'))}
           </button>
         )}
 
@@ -326,7 +327,7 @@ function MarketplaceListCard(props: {
             onClick={() => props.onManage('uninstall', record)}
             className="inline-flex items-center h-8 px-4 rounded-xl text-xs font-medium border border-rose-100 text-rose-500 bg-white hover:bg-rose-50 hover:border-rose-200 disabled:opacity-50 transition-colors"
           >
-            {busyForRecord && props.manageState.action === 'uninstall' ? 'Removing...' : 'Uninstall'}
+            {busyForRecord && props.manageState.action === 'uninstall' ? t('marketplaceRemoving') : t('marketplaceUninstall')}
           </button>
         )}
       </div>
@@ -348,7 +349,7 @@ function PaginationBar(props: {
         onClick={props.onPrev}
         disabled={props.page <= 1 || props.busy}
       >
-        Prev
+        {t('prev')}
       </button>
       <div className="text-sm text-gray-600 min-w-20 text-center">
         {props.totalPages === 0 ? '0 / 0' : `${props.page} / ${props.totalPages}`}
@@ -358,7 +359,7 @@ function PaginationBar(props: {
         onClick={props.onNext}
         disabled={props.totalPages === 0 || props.page >= props.totalPages || props.busy}
       >
-        Next
+        {t('next')}
       </button>
     </div>
   );
@@ -446,13 +447,13 @@ export function MarketplacePage() {
   const listSummary = useMemo(() => {
     if (scope === 'installed') {
       if (installedQuery.isLoading) {
-        return 'Loading...';
+        return t('loading');
       }
-      return `${installedEntries.length} installed`;
+      return `${installedEntries.length} ${t('marketplaceInstalledCountSuffix')}`;
     }
 
     if (!itemsQuery.data) {
-      return 'Loading...';
+      return t('loading');
     }
 
     return `${allItems.length} / ${total}`;
@@ -470,8 +471,8 @@ export function MarketplacePage() {
   };
 
   const tabs = [
-    { id: 'all', label: 'Marketplace' },
-    { id: 'installed', label: 'Installed', count: installedQuery.data?.total ?? 0 }
+    { id: 'all', label: t('marketplaceTabMarketplace') },
+    { id: 'installed', label: t('marketplaceTabInstalled'), count: installedQuery.data?.total ?? 0 }
   ];
 
   const handleInstall = (item: MarketplaceItemSummary) => {
@@ -493,9 +494,9 @@ export function MarketplacePage() {
 
     if (action === 'uninstall') {
       const confirmed = await confirm({
-        title: `Uninstall ${targetId}?`,
-        description: 'This will remove the extension. You can install it again from the marketplace.',
-        confirmLabel: 'Uninstall',
+        title: `${t('marketplaceUninstallTitle')} ${targetId}?`,
+        description: t('marketplaceUninstallDescription'),
+        confirmLabel: t('marketplaceUninstall'),
         variant: 'destructive'
       });
       if (!confirmed) {
@@ -514,8 +515,8 @@ export function MarketplacePage() {
   return (
     <div className="animate-fade-in pb-20">
       <div className="mb-4">
-        <h2 className="text-xl font-semibold text-gray-900">Marketplace</h2>
-        <p className="text-[12px] text-gray-400 mt-0.5">A cleaner extension list focused on install / enable / disable.</p>
+        <h2 className="text-xl font-semibold text-gray-900">{t('marketplacePageTitle')}</h2>
+        <p className="text-[12px] text-gray-400 mt-0.5">{t('marketplacePageDescription')}</p>
       </div>
 
       <Tabs
@@ -546,18 +547,18 @@ export function MarketplacePage() {
 
       <section>
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-[14px] font-semibold text-gray-900">{scope === 'installed' ? 'Installed' : 'Extensions'}</h3>
+          <h3 className="text-[14px] font-semibold text-gray-900">{scope === 'installed' ? t('marketplaceSectionInstalled') : t('marketplaceSectionExtensions')}</h3>
           <span className="text-[12px] text-gray-500">{listSummary}</span>
         </div>
 
         {scope === 'all' && itemsQuery.isError && (
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-            Failed to load marketplace data: {itemsQuery.error.message}
+            {t('marketplaceErrorLoadingData')}: {itemsQuery.error.message}
           </div>
         )}
         {scope === 'installed' && installedQuery.isError && (
           <div className="p-4 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-            Failed to load installed items: {installedQuery.error.message}
+            {t('marketplaceErrorLoadingInstalled')}: {installedQuery.error.message}
           </div>
         )}
 
@@ -588,10 +589,10 @@ export function MarketplacePage() {
         </div>
 
         {scope === 'all' && !itemsQuery.isLoading && !itemsQuery.isError && allItems.length === 0 && (
-          <div className="text-[13px] text-gray-500 py-8 text-center">No items found.</div>
+          <div className="text-[13px] text-gray-500 py-8 text-center">{t('marketplaceNoItems')}</div>
         )}
         {scope === 'installed' && !installedQuery.isLoading && !installedQuery.isError && installedEntries.length === 0 && (
-          <div className="text-[13px] text-gray-500 py-8 text-center">No installed items found.</div>
+          <div className="text-[13px] text-gray-500 py-8 text-center">{t('marketplaceNoInstalledItems')}</div>
         )}
       </section>
 

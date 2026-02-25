@@ -5,6 +5,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useConfig, useConfigSchema, useUpdateModel } from '@/hooks/useConfig';
 import { hintForPath } from '@/lib/config-hints';
+import { formatNumber, t } from '@/lib/i18n';
 import { Folder, Loader2, Sliders, Sparkles } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
@@ -69,8 +70,8 @@ export function ModelConfig() {
   return (
     <div className="max-w-4xl animate-fade-in pb-20">
       <div className="mb-10">
-        <h2 className="text-xl font-semibold text-gray-900">Model Configuration</h2>
-        <p className="text-sm text-gray-500 mt-1">Configure default AI model and runtime limits</p>
+        <h2 className="text-xl font-semibold text-gray-900">{t('modelPageTitle')}</h2>
+        <p className="text-sm text-gray-500 mt-1">{t('modelPageDescription')}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-8">
@@ -81,7 +82,7 @@ export function ModelConfig() {
               <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900">Default Model</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t('defaultModel')}</h3>
             </div>
 
             <div className="space-y-2">
@@ -108,7 +109,7 @@ export function ModelConfig() {
               <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white">
                 <Folder className="h-5 w-5" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900">Workspace</h3>
+              <h3 className="text-lg font-bold text-gray-900">{t('workspace')}</h3>
             </div>
 
             <div className="space-y-2">
@@ -132,16 +133,16 @@ export function ModelConfig() {
             <div className="h-10 w-10 rounded-xl bg-primary flex items-center justify-center text-white">
               <Sliders className="h-5 w-5" />
             </div>
-            <h3 className="text-lg font-bold text-gray-900">Generation Parameters</h3>
+            <h3 className="text-lg font-bold text-gray-900">{t('generationParameters')}</h3>
           </div>
 
           <div className="grid grid-cols-1 gap-12">
             <div className="space-y-4">
               <div className="flex justify-between items-center mb-2">
                 <Label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                  {maxTokensHint?.label ?? 'Max Tokens'}
+                  {maxTokensHint?.label ?? t('maxTokens')}
                 </Label>
-                <span className="text-sm font-semibold text-gray-900">{maxTokens.toLocaleString()}</span>
+                <span className="text-sm font-semibold text-gray-900">{formatNumber(maxTokens)}</span>
               </div>
               <input
                 type="range"
@@ -165,7 +166,7 @@ export function ModelConfig() {
             {updateModel.isPending ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : (
-              'Save Changes'
+              t('saveChanges')
             )}
           </Button>
         </div>

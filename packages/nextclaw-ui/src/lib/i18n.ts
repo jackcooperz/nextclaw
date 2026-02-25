@@ -1,10 +1,134 @@
-// i18n labels - Chinese primary, English fallback
+export type I18nLanguage = 'zh' | 'en';
+
+const I18N_STORAGE_KEY = 'nextclaw.ui.language';
+
+export const LANGUAGE_OPTIONS: Array<{ value: I18nLanguage; label: string }> = [
+  { value: 'en', label: 'English' },
+  { value: 'zh', label: '中文' }
+];
+
+const LANGUAGE_TO_LOCALE: Record<I18nLanguage, string> = {
+  en: 'en-US',
+  zh: 'zh-CN'
+};
+
+let activeLanguage: I18nLanguage = 'en';
+let initialized = false;
+const listeners = new Set<(lang: I18nLanguage) => void>();
+
+function isLanguage(value: unknown): value is I18nLanguage {
+  return value === 'en' || value === 'zh';
+}
+
+function detectBrowserLanguage(): I18nLanguage {
+  if (typeof navigator === 'undefined') {
+    return 'en';
+  }
+  const preferred = navigator.language?.toLowerCase() ?? 'en';
+  return preferred.startsWith('zh') ? 'zh' : 'en';
+}
+
+export function resolveInitialLanguage(): I18nLanguage {
+  if (typeof window === 'undefined') {
+    return 'en';
+  }
+
+  try {
+    const saved = window.localStorage.getItem(I18N_STORAGE_KEY);
+    if (isLanguage(saved)) {
+      return saved;
+    }
+  } catch {
+    // ignore storage failures
+  }
+
+  return detectBrowserLanguage();
+}
+
+export function initializeI18n(): I18nLanguage {
+  if (!initialized) {
+    activeLanguage = resolveInitialLanguage();
+    initialized = true;
+  }
+  return activeLanguage;
+}
+
+export function getLanguage(): I18nLanguage {
+  return initialized ? activeLanguage : initializeI18n();
+}
+
+export function setLanguage(lang: I18nLanguage): void {
+  initializeI18n();
+  if (activeLanguage === lang) {
+    return;
+  }
+
+  activeLanguage = lang;
+
+  if (typeof window !== 'undefined') {
+    try {
+      window.localStorage.setItem(I18N_STORAGE_KEY, lang);
+    } catch {
+      // ignore storage failures
+    }
+  }
+
+  listeners.forEach((listener) => listener(lang));
+}
+
+export function subscribeLanguageChange(listener: (lang: I18nLanguage) => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function getLocale(lang: I18nLanguage = getLanguage()): string {
+  return LANGUAGE_TO_LOCALE[lang];
+}
+
+export function formatDateTime(value?: string | Date, lang: I18nLanguage = getLanguage()): string {
+  if (!value) {
+    return '-';
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === 'string' ? value : '-';
+  }
+
+  return date.toLocaleString(getLocale(lang));
+}
+
+export function formatDateShort(value?: string | Date, lang: I18nLanguage = getLanguage()): string {
+  if (!value) {
+    return '-';
+  }
+
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return typeof value === 'string' ? value : '-';
+  }
+
+  return new Intl.DateTimeFormat(getLocale(lang), {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).format(date);
+}
+
+export function formatNumber(value: number, lang: I18nLanguage = getLanguage()): string {
+  return new Intl.NumberFormat(getLocale(lang)).format(value);
+}
+
 export const LABELS: Record<string, { zh: string; en: string }> = {
   // Navigation
   model: { zh: '模型', en: 'Model' },
   providers: { zh: '提供商', en: 'Providers' },
   channels: { zh: '渠道', en: 'Channels' },
   cron: { zh: '定时任务', en: 'Cron Jobs' },
+  runtime: { zh: '路由与运行时', en: 'Routing & Runtime' },
+  marketplace: { zh: '市场', en: 'Marketplace' },
 
   // Common
   enabled: { zh: '启用', en: 'Enabled' },
@@ -17,14 +141,34 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   loading: { zh: '加载中...', en: 'Loading...' },
   success: { zh: '成功', en: 'Success' },
   error: { zh: '错误', en: 'Error' },
+  confirm: { zh: '确认', en: 'Confirm' },
+  unchanged: { zh: '未修改', en: 'Unchanged' },
+  saving: { zh: '保存中...', en: 'Saving...' },
+  remove: { zh: '移除', en: 'Remove' },
+  all: { zh: '全部', en: 'All' },
+  prev: { zh: '上一页', en: 'Prev' },
+  next: { zh: '下一页', en: 'Next' },
+  language: { zh: '语言', en: 'Language' },
 
   // Model
-  modelName: { zh: '模型', en: 'Model' },
+  modelPageTitle: { zh: '模型配置', en: 'Model Configuration' },
+  modelPageDescription: { zh: '配置默认 AI 模型和运行参数限制', en: 'Configure default AI model and runtime limits' },
+  defaultModel: { zh: '默认模型', en: 'Default Model' },
   workspace: { zh: '工作空间', en: 'Workspace' },
+  generationParameters: { zh: '生成参数', en: 'Generation Parameters' },
+  modelName: { zh: '模型', en: 'Model' },
   maxTokens: { zh: '最大 Token 数', en: 'Max Tokens' },
   maxToolIterations: { zh: '最大工具迭代次数', en: 'Max Tool Iterations' },
+  saveChanges: { zh: '保存变更', en: 'Save Changes' },
 
   // Provider
+  providersPageTitle: { zh: 'AI 提供商', en: 'AI Providers' },
+  providersLoading: { zh: '加载中...', en: 'Loading...' },
+  providersTabConfigured: { zh: '已配置', en: 'Configured' },
+  providersTabAll: { zh: '全部提供商', en: 'All Providers' },
+  providersDefaultDescription: { zh: '为你的 Agent 配置 AI 服务', en: 'Configure AI services for your agents' },
+  providersEmptyTitle: { zh: '尚未配置提供商', en: 'No providers configured' },
+  providersEmptyDescription: { zh: '添加一个 AI 提供商后即可开始使用。', en: 'Add an AI provider to start using the platform.' },
   apiKey: { zh: 'API 密钥', en: 'API Key' },
   apiBase: { zh: 'API Base', en: 'API Base' },
   extraHeaders: { zh: '额外请求头', en: 'Extra Headers' },
@@ -36,8 +180,26 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   apiKeyNotSet: { zh: '未设置', en: 'Not Set' },
   showKey: { zh: '显示密钥', en: 'Show Key' },
   hideKey: { zh: '隐藏密钥', en: 'Hide Key' },
+  providerFormDescription: { zh: '配置 AI 提供商的 API 密钥与参数', en: 'Configure API keys and parameters for AI provider' },
+  enterApiKey: { zh: '请输入 API 密钥', en: 'Enter API Key' },
+  leaveBlankToKeepUnchanged: { zh: '留空则保持不变', en: 'Leave blank to keep unchanged' },
 
   // Channel
+  channelsPageTitle: { zh: '消息渠道', en: 'Message Channels' },
+  channelsLoading: { zh: '加载渠道中...', en: 'Loading channels...' },
+  channelsTabEnabled: { zh: '已启用', en: 'Enabled' },
+  channelsTabAll: { zh: '全部渠道', en: 'All Channels' },
+  channelsEmptyTitle: { zh: '暂无启用渠道', en: 'No channels enabled' },
+  channelsEmptyDescription: { zh: '启用一个消息渠道以开始接收消息。', en: 'Enable a messaging channel to start receiving messages.' },
+  channelDescriptionDefault: { zh: '配置该通信渠道', en: 'Configure this communication channel' },
+  channelDescTelegram: { zh: '连接 Telegram 机器人以进行即时消息收发', en: 'Connect with Telegram bots for instant messaging' },
+  channelDescSlack: { zh: '接入 Slack 工作区进行团队协作消息处理', en: 'Integrate with Slack workspaces for team collaboration' },
+  channelDescEmail: { zh: '通过邮件协议收发消息', en: 'Send and receive messages via email protocols' },
+  channelDescWebhook: { zh: '接收 HTTP Webhook 以支持自定义集成', en: 'Receive HTTP webhooks for custom integrations' },
+  channelDescDiscord: { zh: '将 Discord 机器人连接到你的社区服务器', en: 'Connect Discord bots to your community servers' },
+  channelDescFeishu: { zh: '企业消息与协作平台接入', en: 'Enterprise messaging and collaboration platform' },
+  configureMessageChannelParameters: { zh: '配置消息渠道参数', en: 'Configure message channel parameters' },
+  channelsGuideTitle: { zh: '查看指南', en: 'View Guide' },
   allowFrom: { zh: '允许来源', en: 'Allow From' },
   token: { zh: 'Token', en: 'Token' },
   botToken: { zh: 'Bot Token', en: 'Bot Token' },
@@ -100,6 +262,54 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   replyDelayMode: { zh: '回复延迟模式', en: 'Reply Delay Mode' },
   replyDelayMs: { zh: '回复延迟(ms)', en: 'Reply Delay (ms)' },
   secret: { zh: '密钥', en: 'Secret' },
+  accountId: { zh: '账号 ID', en: 'Account ID' },
+  dmPolicy: { zh: '私聊策略', en: 'DM Policy' },
+  groupAllowFrom: { zh: '群组允许来源', en: 'Group Allow From' },
+  requireMention: { zh: '需要 @ 提及', en: 'Require Mention' },
+  mentionPatterns: { zh: '提及匹配规则', en: 'Mention Patterns' },
+  groupRulesJson: { zh: '群组规则（JSON）', en: 'Group Rules (JSON)' },
+  allowBotMessages: { zh: '允许机器人消息', en: 'Allow Bot Messages' },
+  attachmentMaxSizeMb: { zh: '附件最大体积（MB）', en: 'Attachment Max Size (MB)' },
+  streamingMode: { zh: '流式模式', en: 'Streaming Mode' },
+  draftChunkingJson: { zh: '草稿分块（JSON）', en: 'Draft Chunking (JSON)' },
+  textChunkLimit: { zh: '文本分块上限', en: 'Text Chunk Limit' },
+  invalidJson: { zh: 'JSON 格式无效', en: 'Invalid JSON' },
+
+  // Runtime
+  runtimePageTitle: { zh: '路由与运行时', en: 'Routing & Runtime' },
+  runtimePageDescription: { zh: '对齐 OpenClaw 的多 Agent 路由：绑定规则、Agent 池、私聊范围。', en: 'Align multi-agent routing with OpenClaw: bindings, agent pool, and DM scope.' },
+  runtimeLoading: { zh: '加载运行时配置中...', en: 'Loading runtime settings...' },
+  dmScope: { zh: '私聊范围', en: 'DM Scope' },
+  dmScopeHelp: { zh: '控制私聊会话如何隔离。', en: 'Control how direct-message sessions are isolated.' },
+  defaultContextTokens: { zh: '默认上下文 Token', en: 'Default Context Tokens' },
+  defaultContextTokensHelp: { zh: '当 Agent 未设置单独值时使用该上下文预算。', en: 'Input context budget for agents when no per-agent override is set.' },
+  maxPingPongTurns: { zh: '最大乒乓轮次', en: 'Max Ping-Pong Turns' },
+  maxPingPongTurnsHelp: { zh: '设为 0 可阻止 Agent 间自动 ping-pong。', en: 'Set to 0 to block automatic agent-to-agent ping-pong loops.' },
+  agentList: { zh: 'Agent 列表', en: 'Agent List' },
+  agentListHelp: { zh: '在同一个网关进程中运行多个固定角色 Agent。', en: 'Run multiple fixed-role agents in one gateway process.' },
+  bindings: { zh: '绑定规则', en: 'Bindings' },
+  bindingsHelp: { zh: '根据渠道 + 账号 + 对端将入站消息路由到目标 Agent。', en: 'Route inbound message by channel + account + peer to target agent.' },
+  agentIdRequiredError: { zh: 'agents.list[{index}].id 必填', en: 'agents.list[{index}].id is required' },
+  duplicateAgentId: { zh: '重复的 agent id', en: 'Duplicate agent id' },
+  bindingAgentIdRequired: { zh: 'bindings[{index}].agentId 必填', en: 'bindings[{index}].agentId is required' },
+  bindingAgentIdNotFound: { zh: 'bindings[{index}].agentId 未在 agents.list/main 中找到', en: "bindings[{index}].agentId not found in agents.list/main" },
+  bindingChannelRequired: { zh: 'bindings[{index}].match.channel 必填', en: 'bindings[{index}].match.channel is required' },
+  bindingPeerIdRequired: { zh: '设置 peer.kind 时，bindings[{index}].match.peer.id 必填', en: 'bindings[{index}].match.peer.id is required when peer.kind is set' },
+  agentIdPlaceholder: { zh: 'Agent ID（例如 engineer）', en: 'Agent ID (e.g. engineer)' },
+  workspaceOverridePlaceholder: { zh: '工作空间覆盖（可选）', en: 'Workspace override (optional)' },
+  modelOverridePlaceholder: { zh: '模型覆盖（可选）', en: 'Model override (optional)' },
+  maxTokensPlaceholder: { zh: '最大 tokens', en: 'Max tokens' },
+  contextTokensPlaceholder: { zh: '上下文 tokens', en: 'Context tokens' },
+  maxToolsPlaceholder: { zh: '最大工具次数', en: 'Max tools' },
+  defaultAgent: { zh: '默认 Agent', en: 'Default agent' },
+  addAgent: { zh: '添加 Agent', en: 'Add Agent' },
+  targetAgentIdPlaceholder: { zh: '目标 Agent ID', en: 'Target agent ID' },
+  channelPlaceholder: { zh: '渠道（例如 discord）', en: 'Channel (e.g. discord)' },
+  accountIdOptionalPlaceholder: { zh: '账号 ID（可选）', en: 'Account ID (optional)' },
+  peerKindOptional: { zh: '对端类型（可选）', en: 'Peer kind (optional)' },
+  peerIdPlaceholder: { zh: '对端 ID（需先设置对端类型）', en: 'Peer ID (requires peer kind)' },
+  addBinding: { zh: '添加绑定', en: 'Add Binding' },
+  saveRuntimeSettings: { zh: '保存运行时设置', en: 'Save Runtime Settings' },
 
   // Sessions
   sessionsPageTitle: { zh: '会话管理', en: 'Sessions' },
@@ -137,6 +347,13 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   sessionsHistoryLoading: { zh: '加载历史中...', en: 'Loading history...' },
   sessionsApplyingChanges: { zh: '正在应用会话变更...', en: 'Applying session changes...' },
   sessionsUnknownChannel: { zh: '未知渠道', en: 'Unknown channel' },
+  sessionsAllChannels: { zh: '全部渠道', en: 'All Channels' },
+  sessionsMetadata: { zh: '元信息', en: 'Metadata' },
+  sessionsNoSelectionTitle: { zh: '未选择会话', en: 'No Session Selected' },
+  sessionsNoSelectionDescription: {
+    zh: '从左侧列表选择一个会话以查看聊天历史并配置其元信息。',
+    en: 'Select a session from the list on the left to view its chat history and configure its metadata.'
+  },
 
   // Cron
   cronPageTitle: { zh: '定时任务', en: 'Cron Jobs' },
@@ -164,14 +381,59 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   cronRunConfirm: { zh: '确认立即执行定时任务', en: 'Run cron job now' },
   cronRunForceConfirm: { zh: '任务已禁用，仍要立即执行', en: 'Cron job disabled. Force run now' },
 
-  // UI
-  saveVerifyConnect: { zh: '保存并验证 / 连接', en: 'Save & Verify / Connect' },
+  // Marketplace
+  marketplacePageTitle: { zh: '市场', en: 'Marketplace' },
+  marketplacePageDescription: { zh: '更清爽的扩展列表，聚焦安装/启用/禁用。', en: 'A cleaner extension list focused on install / enable / disable.' },
+  marketplaceTabMarketplace: { zh: '市场', en: 'Marketplace' },
+  marketplaceTabInstalled: { zh: '已安装', en: 'Installed' },
+  marketplaceSearchPlaceholder: { zh: '搜索扩展...', en: 'Search extensions...' },
+  marketplaceFilterAll: { zh: '全部', en: 'All' },
+  marketplaceFilterPlugins: { zh: '插件', en: 'Plugins' },
+  marketplaceFilterSkills: { zh: '技能', en: 'Skills' },
+  marketplaceSortRelevance: { zh: '相关性', en: 'Relevance' },
+  marketplaceSortUpdated: { zh: '最近更新', en: 'Recently Updated' },
+  marketplaceUnknownItem: { zh: '未知项目', en: 'Unknown Item' },
+  marketplaceInstalledLocalSummary: { zh: '已在本地安装，市场暂无详情。', en: 'Installed locally. Details are currently unavailable from marketplace.' },
+  marketplaceTypePlugin: { zh: '插件', en: 'Plugin' },
+  marketplaceTypeSkill: { zh: '技能', en: 'Skill' },
+  marketplaceTypeExtension: { zh: '扩展', en: 'Extension' },
+  marketplaceInstall: { zh: '安装', en: 'Install' },
+  marketplaceInstalling: { zh: '安装中...', en: 'Installing...' },
+  marketplaceEnable: { zh: '启用', en: 'Enable' },
+  marketplaceDisable: { zh: '禁用', en: 'Disable' },
+  marketplaceEnabling: { zh: '启用中...', en: 'Enabling...' },
+  marketplaceDisabling: { zh: '禁用中...', en: 'Disabling...' },
+  marketplaceUninstall: { zh: '卸载', en: 'Uninstall' },
+  marketplaceRemoving: { zh: '卸载中...', en: 'Removing...' },
+  marketplaceSectionInstalled: { zh: '已安装', en: 'Installed' },
+  marketplaceSectionExtensions: { zh: '扩展', en: 'Extensions' },
+  marketplaceErrorLoadingData: { zh: '加载市场数据失败', en: 'Failed to load marketplace data' },
+  marketplaceErrorLoadingInstalled: { zh: '加载已安装项目失败', en: 'Failed to load installed items' },
+  marketplaceNoItems: { zh: '未找到项目。', en: 'No items found.' },
+  marketplaceNoInstalledItems: { zh: '未找到已安装项目。', en: 'No installed items found.' },
+  marketplaceUninstallTitle: { zh: '确认卸载', en: 'Uninstall' },
+  marketplaceUninstallDescription: {
+    zh: '该操作会移除扩展，后续可在市场中重新安装。',
+    en: 'This will remove the extension. You can install it again from the marketplace.'
+  },
+  marketplaceInstallFailed: { zh: '安装失败', en: 'Install failed' },
+  marketplaceOperationFailed: { zh: '操作失败', en: 'Operation failed' },
+  marketplaceInstalledCountSuffix: { zh: '已安装', en: 'installed' },
 
   // Status
   connected: { zh: '已连接', en: 'Connected' },
   disconnected: { zh: '未连接', en: 'Disconnected' },
   connecting: { zh: '连接中...', en: 'Connecting...' },
   feishuConnecting: { zh: '验证 / 连接中...', en: 'Verifying / connecting...' },
+  statusReady: { zh: '就绪', en: 'Ready' },
+  statusSetup: { zh: '待配置', en: 'Setup' },
+  statusActive: { zh: '活跃', en: 'Active' },
+  statusInactive: { zh: '未启用', en: 'Inactive' },
+
+  // Action labels
+  actionConfigure: { zh: '配置', en: 'Configure' },
+  actionAddProvider: { zh: '添加提供商', en: 'Add Provider' },
+  actionEnable: { zh: '启用', en: 'Enable' },
 
   // Messages
   configSaved: { zh: '配置已保存', en: 'Configuration saved' },
@@ -199,6 +461,6 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   docBrowserHelp: { zh: '帮助文档', en: 'Help Docs' },
 };
 
-export function t(key: string, lang: 'zh' | 'en' = 'en'): string {
+export function t(key: string, lang: I18nLanguage = getLanguage()): string {
   return LABELS[key]?.[lang] || LABELS[key]?.en || key;
 }

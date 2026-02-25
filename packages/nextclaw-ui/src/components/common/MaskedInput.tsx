@@ -18,7 +18,7 @@ export function MaskedInput({ maskedValue, isSet, className, ...props }: MaskedI
       <Input
         type={showKey ? 'text' : 'password'}
         className={cn('pr-20', className)}
-        placeholder={isSet ? `${t('apiKeySet')} (Unchanged)` : ''}
+        placeholder={isSet ? `${t('apiKeySet')} (${t('unchanged')})` : ''}
         {...props}
       />
       <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1">

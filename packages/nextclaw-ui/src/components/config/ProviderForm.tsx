@@ -96,7 +96,7 @@ export function ProviderForm() {
             </div>
             <div>
               <DialogTitle>{providerSpec?.displayName || providerName}</DialogTitle>
-              <DialogDescription>Configure API keys and parameters for AI provider</DialogDescription>
+              <DialogDescription>{t('providerFormDescription')}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
@@ -116,7 +116,7 @@ export function ProviderForm() {
                 placeholder={
                   providerConfig?.apiKeySet
                     ? t('apiKeySet')
-                    : apiKeyHint?.placeholder ?? 'Enter API Key'
+                    : apiKeyHint?.placeholder ?? t('enterApiKey')
                 }
                 className="rounded-xl"
               />
@@ -193,7 +193,7 @@ export function ProviderForm() {
               type="submit"
               disabled={updateProvider.isPending}
             >
-              {updateProvider.isPending ? 'Saving...' : t('save')}
+              {updateProvider.isPending ? t('saving') : t('save')}
             </Button>
           </DialogFooter>
         </form>

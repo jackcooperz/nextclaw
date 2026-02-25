@@ -1,49 +1,61 @@
 import { cn } from '@/lib/utils';
-import { t } from '@/lib/i18n';
-import { Cpu, GitBranch, History, MessageSquare, Sparkles, BookOpen, Store, AlarmClock } from 'lucide-react';
+import { LANGUAGE_OPTIONS, t, type I18nLanguage } from '@/lib/i18n';
+import { Cpu, GitBranch, History, MessageSquare, Sparkles, BookOpen, Store, AlarmClock, Languages } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useDocBrowser } from '@/components/doc-browser';
-
-const navItems = [
-  {
-    target: '/model',
-    label: 'Models',
-    icon: Cpu,
-  },
-  {
-    target: '/providers',
-    label: 'Providers',
-    icon: Sparkles,
-  },
-  {
-    target: '/channels',
-    label: 'Channels',
-    icon: MessageSquare,
-  },
-  {
-    target: '/runtime',
-    label: 'Routing & Runtime',
-    icon: GitBranch,
-  },
-  {
-    target: '/sessions',
-    label: t('sessions'),
-    icon: History,
-  },
-  {
-    target: '/cron',
-    label: t('cron'),
-    icon: AlarmClock,
-  },
-  {
-    target: '/marketplace',
-    label: 'Marketplace',
-    icon: Store,
-  }
-];
+import { useI18n } from '@/components/providers/I18nProvider';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 
 export function Sidebar() {
   const docBrowser = useDocBrowser();
+  const { language, setLanguage } = useI18n();
+  const currentLanguageLabel = LANGUAGE_OPTIONS.find((option) => option.value === language)?.label ?? language;
+
+  const handleLanguageSwitch = (nextLanguage: I18nLanguage) => {
+    if (language === nextLanguage) {
+      return;
+    }
+    setLanguage(nextLanguage);
+    window.location.reload();
+  };
+
+  const navItems = [
+    {
+      target: '/model',
+      label: t('model'),
+      icon: Cpu,
+    },
+    {
+      target: '/providers',
+      label: t('providers'),
+      icon: Sparkles,
+    },
+    {
+      target: '/channels',
+      label: t('channels'),
+      icon: MessageSquare,
+    },
+    {
+      target: '/runtime',
+      label: t('runtime'),
+      icon: GitBranch,
+    },
+    {
+      target: '/sessions',
+      label: t('sessions'),
+      icon: History,
+    },
+    {
+      target: '/cron',
+      label: t('cron'),
+      icon: AlarmClock,
+    },
+    {
+      target: '/marketplace',
+      label: t('marketplace'),
+      icon: Store,
+    }
+  ];
 
   return (
     <aside className="w-[240px] bg-[#f0f2f7] flex flex-col h-full py-6 px-4">
@@ -92,6 +104,24 @@ export function Sidebar() {
 
       {/* Help Button */}
       <div className="pt-3 border-t border-[#dde0ea] mt-3">
+        <div className="mb-2">
+          <Select value={language} onValueChange={(value) => handleLanguageSwitch(value as I18nLanguage)}>
+            <SelectTrigger className="w-full h-auto rounded-xl border-0 bg-transparent shadow-none px-3 py-2.5 text-[14px] font-medium text-gray-600 hover:bg-[#e4e7ef] focus:ring-0">
+              <div className="flex items-center gap-3 min-w-0">
+                <Languages className="h-[17px] w-[17px] text-gray-400" />
+                <span className="text-left">{t('language')}</span>
+              </div>
+              <span className="ml-auto text-xs text-gray-500">{currentLanguageLabel}</span>
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGE_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="text-xs">
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <button
           onClick={() => docBrowser.open()}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-base text-gray-600 hover:bg-[#e4e7ef] hover:text-gray-800"
