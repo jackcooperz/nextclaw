@@ -27,11 +27,6 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
 
     <!-- Hero Section -->
     <main class="flex-1 flex flex-col items-center justify-center text-center px-6 pt-32 pb-20 z-10">
-      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-sm font-medium text-muted-foreground mb-8 animate-slide-up opacity-0" style="animation-delay: 0.1s">
-        <span class="flex h-2 w-2 rounded-full bg-primary animate-pulse"></span>
-        v0.3.16 is now available
-      </div>
-      
       <h1 class="text-5xl md:text-7xl font-bold tracking-tight text-gradient max-w-4xl mb-6 animate-slide-up opacity-0" style="animation-delay: 0.2s">
         The effortlessly simple <br /> Personal AI Assistant.
       </h1>
@@ -40,14 +35,48 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
         Feature-rich, OpenClaw-compatible gateway. Multi-provider, multi-channel capabilities with an elegant zero-config interface. 
       </p>
       
-      <div class="flex flex-col sm:flex-row gap-4 mb-16 animate-slide-up opacity-0" style="animation-delay: 0.4s">
-        <div class="glass-card flex items-center pl-4 pr-1 py-1 rounded-full gap-3 transition-transform hover:scale-[1.02]">
-          <span class="text-sm font-mono text-muted-foreground select-all">npm i -g nextclaw</span>
-          <button id="copy-btn" class="bg-primary hover:bg-primary/90 text-white rounded-full p-2 w-10 h-10 flex items-center justify-center transition-colors focus:ring-2 focus:ring-primary focus:outline-none">
-            <i data-lucide="copy" class="w-4 h-4"></i>
-          </button>
+      <!-- Terminal Block -->
+      <div class="w-full max-w-2xl mx-auto mb-10 text-left animate-slide-up opacity-0" style="animation-delay: 0.4s">
+        <div class="rounded-2xl overflow-hidden bg-[#1a1b26] shadow-2xl border border-white/10">
+          <div class="flex items-center justify-between px-4 py-3 bg-[#111219]">
+            <div class="flex gap-2">
+              <div class="w-3 h-3 rounded-full bg-[#ff5f56]"></div>
+              <div class="w-3 h-3 rounded-full bg-[#ffbd2e]"></div>
+              <div class="w-3 h-3 rounded-full bg-[#27c93f]"></div>
+            </div>
+            <div class="text-xs text-slate-400 font-mono">bash</div>
+            <button id="copy-btn" class="text-slate-400 hover:text-white transition-colors" title="Copy commands">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+            </button>
+          </div>
+          <div class="p-6 font-mono text-sm sm:text-base leading-relaxed">
+            <div class="flex items-center text-slate-300">
+              <span class="text-[#f7768e] mr-3 font-bold">$</span>
+              <span>npm install -g nextclaw</span>
+            </div>
+            <div class="flex items-center text-slate-300 mt-2">
+              <span class="text-[#f7768e] mr-3 font-bold">$</span>
+              <span>nextclaw start</span>
+            </div>
+            <div class="flex items-start text-slate-500 mt-4 italic">
+              <span class="mr-3 font-bold">&gt;</span>
+              <span>
+                UI:  <span class="text-[#7aa2f7]">http://127.0.0.1:18791</span><br />
+                API: <span class="text-[#7aa2f7]">http://127.0.0.1:18791/api</span>
+              </span>
+            </div>
+          </div>
         </div>
-        <a href="https://github.com/Peiiii/nextclaw" target="_blank" class="inline-flex items-center justify-center gap-2 h-12 px-6 rounded-full font-medium bg-foreground text-background hover:bg-foreground/90 transition-colors shadow-sm focus:ring-2 focus:ring-foreground focus:outline-none">
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="flex flex-col sm:flex-row justify-center gap-4 mb-20 animate-slide-up opacity-0" style="animation-delay: 0.5s">
+        <a href="https://docs.nextclaw.io" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-semibold bg-primary text-primary-foreground hover:bg-primary/90 transition-all hover:scale-105 shadow-xl shadow-primary/25 focus:ring-2 focus:ring-primary focus:outline-none text-lg">
+          <i data-lucide="book-open" class="w-5 h-5"></i>
+          Read the Docs
+        </a>
+        <a href="https://github.com/Peiiii/nextclaw" target="_blank" class="inline-flex items-center justify-center gap-2 h-14 px-8 rounded-full font-medium bg-foreground text-background hover:bg-foreground/90 transition-all hover:scale-105 shadow-sm focus:ring-2 focus:ring-foreground focus:outline-none text-lg">
+          <i data-lucide="github" class="w-5 h-5"></i>
           View on GitHub
         </a>
       </div>
@@ -56,24 +85,15 @@ document.querySelector<HTMLDivElement>('#app')!.innerHTML = `
       <div class="relative w-full max-w-5xl mx-auto animate-fade-in opacity-0" style="animation-delay: 0.6s">
         <div class="absolute inset-0 bg-primary/10 blur-[100px] rounded-full"></div>
         <div class="glass-card rounded-2xl overflow-hidden border border-border/50 shadow-2xl animate-float">
-          <!-- Placeholder for actual screenshot or animated UI mock -->
-          <div class="w-full aspect-[16/9] bg-secondary/50 flex flex-col">
+          <div class="w-full bg-background flex flex-col">
             <!-- Mac window control -->
-            <div class="h-10 border-b flex items-center px-4 gap-2 bg-background/50">
+            <div class="h-10 border-b flex items-center px-4 gap-2 bg-background/80 shrink-0">
               <div class="w-3 h-3 rounded-full bg-red-400"></div>
               <div class="w-3 h-3 rounded-full bg-yellow-400"></div>
               <div class="w-3 h-3 rounded-full bg-green-400"></div>
             </div>
-            <!-- Mock Content -->
-            <div class="flex-1 p-8 flex items-center justify-center">
-              <div class="text-center space-y-4">
-                 <div class="mx-auto w-16 h-16 bg-primary/20 rounded-2xl flex items-center justify-center shadow-inner">
-                    <i data-lucide="bot" class="w-8 h-8 text-primary"></i>
-                 </div>
-                 <h3 class="text-xl font-medium">NextClaw Config Interface</h3>
-                 <p class="text-sm text-muted-foreground">Manage your AI seamlessly</p>
-              </div>
-            </div>
+            <!-- Actual Screenshot -->
+            <img src="/nextclaw-ui.png" alt="NextClaw Web Interface" class="w-full h-auto object-cover border-t border-border/40" />
           </div>
         </div>
       </div>
@@ -195,18 +215,16 @@ const copyBtn = document.getElementById('copy-btn');
 if (copyBtn) {
   copyBtn.addEventListener('click', async () => {
     try {
-      await navigator.clipboard.writeText('npm i -g nextclaw');
+      await navigator.clipboard.writeText('npm install -g nextclaw && nextclaw start');
 
       // Visual feedback
       const originalIcon = copyBtn.innerHTML;
-      copyBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4"></i>';
+      copyBtn.innerHTML = '<i data-lucide="check" class="w-4 h-4 text-[#27c93f]"></i>';
       createIcons({ icons, nameAttr: 'data-lucide' });
-      copyBtn.classList.add('bg-green-500');
 
       setTimeout(() => {
         copyBtn.innerHTML = originalIcon;
         createIcons({ icons, nameAttr: 'data-lucide' });
-        copyBtn.classList.remove('bg-green-500');
       }, 2000);
     } catch (err) {
       console.error('Failed to copy text: ', err);
