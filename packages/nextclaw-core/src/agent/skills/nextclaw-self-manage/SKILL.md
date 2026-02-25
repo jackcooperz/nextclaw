@@ -42,6 +42,13 @@ When user explicitly asks to update NextClaw:
 4. Verify recovery with `nextclaw status --json` and `nextclaw doctor --json` when needed.
 5. If auto-ping fails, explain fallback and ask user to send one retry message.
 
+## Release Notes / Changelog Lookup
+
+When user asks "what changed in version X", follow:
+
+- `references/release-notes-changelog.md`
+- Do not claim details without a traceable source path.
+
 ## High-frequency Intents
 
 - Service health: `nextclaw status --json` / `nextclaw doctor --json`
