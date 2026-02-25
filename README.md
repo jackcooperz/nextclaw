@@ -169,6 +169,7 @@ nextclaw stop   # stop the service
 
 ## 📚 Docs
 
+- [Roadmap](docs/ROADMAP.md)
 - [Configuration, providers, channels, cron](https://docs.nextclaw.io/guide/configuration)
 - [Multi-agent architecture: single Gateway, bindings, session isolation](https://docs.nextclaw.io/guide/multi-agent)
 - [RFC: Action Schema v1](https://docs.nextclaw.io)
