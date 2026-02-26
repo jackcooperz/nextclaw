@@ -1,5 +1,9 @@
+import { lazy, Suspense } from 'react';
 import { Sidebar } from './Sidebar';
-import { DocBrowserProvider, DocBrowser, useDocBrowser, useDocLinkInterceptor } from '@/components/doc-browser';
+import { DocBrowserProvider, useDocBrowser } from '@/components/doc-browser/DocBrowserContext';
+import { useDocLinkInterceptor } from '@/components/doc-browser/useDocLinkInterceptor';
+
+const DocBrowser = lazy(async () => ({ default: (await import('@/components/doc-browser/DocBrowser')).DocBrowser }));
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -21,9 +25,17 @@ function AppLayoutInner({ children }: AppLayoutProps) {
           </main>
         </div>
         {/* Doc Browser: docked mode renders inline, floating mode renders as overlay */}
-        {isOpen && mode === 'docked' && <DocBrowser />}
+        {isOpen && mode === 'docked' && (
+          <Suspense fallback={null}>
+            <DocBrowser />
+          </Suspense>
+        )}
       </div>
-      {isOpen && mode === 'floating' && <DocBrowser />}
+      {isOpen && mode === 'floating' && (
+        <Suspense fallback={null}>
+          <DocBrowser />
+        </Suspense>
+      )}
     </div>
   );
 }
