@@ -1,5 +1,11 @@
 # nextclaw-server
 
+## 0.5.10
+
+### Patch Changes
+
+- Enable gzip compression for built-in UI static assets and improve slow-network loading behavior.
+
 ## 0.5.9
 
 ### Patch Changes
