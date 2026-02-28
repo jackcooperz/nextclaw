@@ -1,0 +1,76 @@
+name: installer-build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+jobs:
+  build-installers:
+    name: ${{ matrix.platform }}-${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-14
+            platform: darwin
+            arch: arm64
+          - os: macos-14
+            platform: darwin
+            arch: x64
+          - os: windows-latest
+            platform: win32
+            arch: x64
+          - os: windows-latest
+            platform: win32
+            arch: arm64
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.1
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build workspace
+        run: pnpm build
+
+      - name: Install NSIS
+        if: runner.os == 'Windows'
+        run: choco install nsis -y
+
+      - name: Build installer
+        run: node scripts/installer/build-installer.mjs --platform=${{ matrix.platform }} --arch=${{ matrix.arch }} --output-dir=dist/installers
+
+      - name: Upload installer artifacts (macOS)
+        if: matrix.platform == 'darwin'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextclaw-installer-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/installers/*-beta-macos-${{ matrix.arch }}-installer.pkg
+            dist/installers/manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+
+      - name: Upload installer artifacts (Windows)
+        if: matrix.platform == 'win32'
+        uses: actions/upload-artifact@v4
+        with:
+          name: nextclaw-installer-${{ matrix.platform }}-${{ matrix.arch }}
+          path: |
+            dist/installers/*-beta-windows-${{ matrix.arch }}-installer.exe
+            dist/installers/manifest-${{ matrix.platform }}-${{ matrix.arch }}.json

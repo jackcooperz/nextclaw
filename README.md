@@ -82,12 +82,29 @@ Config lives in `~/.nextclaw/config.json`; gateway and server both use it (with 
 
 ## 👥 Community
 
-- **QQ Group** (群号 1084340143): [Scan QR to join](images/contact/nextclaw-contact-qq-group.jpg)
+- **QQ Group** (群号 1084340143) — Scan QR to join:
+
+  ![QQ Group QR](images/contact/nextclaw-contact-qq-group.jpg)
+
 - **Discord**: [NextClaw/OpenClaw](https://discord.gg/j4Skbgye)
 
 ---
 
 ## 🚀 Quick Start
+
+### Desktop installer (Beta, recommended for non-technical users)
+
+Download from [GitHub Releases](https://github.com/Peiiii/nextclaw/releases/latest):
+
+- macOS Apple Silicon: `NextClaw-<version>-beta-macos-arm64-installer.pkg`
+- macOS Intel: `NextClaw-<version>-beta-macos-x64-installer.pkg`
+- Windows x64: `NextClaw-<version>-beta-windows-x64-installer.exe`
+- Windows ARM64: `NextClaw-<version>-beta-windows-arm64-installer.exe`
+
+Install, then open **Start NextClaw** from Desktop or Start Menu.
+Beta notice: desktop installers are still beta and may have issues.
+
+### npm install (developer-friendly)
 
 ```bash
 npm i -g nextclaw
