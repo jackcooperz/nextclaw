@@ -55,6 +55,7 @@ class InstallerBuilder {
     this.nodeVersion = options.nodeVersion;
     this.outputDir = options.outputDir;
     this.keepWorkdir = options.keepWorkdir;
+    this.packageSpec = options.packageSpec;
 
     this.runner = new CommandRunner();
     this.repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -81,6 +82,9 @@ class InstallerBuilder {
   }
 
   ensureBuildArtifacts() {
+    if (this.packageSpec) {
+      return;
+    }
     const distDir = resolve(this.nextclawDir, "dist");
     const uiDistDir = resolve(this.nextclawDir, "ui-dist");
     if (!existsSync(distDir) || !existsSync(uiDistDir)) {
@@ -103,6 +107,16 @@ class InstallerBuilder {
   }
 
   readVersion() {
+    if (this.packageSpec) {
+      const resolvedVersion = this.runner
+        .capture("npm", ["view", this.packageSpec, "version"])
+        .trim();
+      if (!resolvedVersion) {
+        throw new Error(`Unable to resolve version for package spec: ${this.packageSpec}`);
+      }
+      this.version = resolvedVersion;
+      return;
+    }
     const packageJsonPath = resolve(this.nextclawDir, "package.json");
     const packageJson = JSON.parse(readFileSync(packageJsonPath, "utf8"));
     this.version = packageJson.version;
@@ -112,7 +126,12 @@ class InstallerBuilder {
   }
 
   packNextclaw() {
-    const packOutput = this.runner.capture("npm", ["pack", "--silent"], { cwd: this.nextclawDir });
+    const packArgs = this.packageSpec
+      ? ["pack", this.packageSpec, "--silent"]
+      : ["pack", "--silent"];
+    const packOutput = this.runner.capture("npm", packArgs, {
+      cwd: this.packageSpec ? this.downloadDir : this.nextclawDir
+    });
     const lines = packOutput
       .split(/\r?\n/)
       .map((line) => line.trim())
@@ -121,10 +140,15 @@ class InstallerBuilder {
     if (!packName || !packName.endsWith(".tgz")) {
       throw new Error(`Unexpected npm pack output: ${packOutput}`);
     }
-    const packedFromRepoPath = resolve(this.nextclawDir, packName);
+    const packedFromRepoPath = resolve(
+      this.packageSpec ? this.downloadDir : this.nextclawDir,
+      packName
+    );
     const packedTargetPath = resolve(this.downloadDir, packName);
-    cpSync(packedFromRepoPath, packedTargetPath);
-    unlinkSync(packedFromRepoPath);
+    if (packedFromRepoPath !== packedTargetPath) {
+      cpSync(packedFromRepoPath, packedTargetPath);
+      unlinkSync(packedFromRepoPath);
+    }
     this.packedTgzPath = packedTargetPath;
     this.manifest.packageTarball = {
       path: this.packedTgzPath,
@@ -428,7 +452,8 @@ function parseArgs(argv) {
     arch: process.arch,
     nodeVersion: process.env.NEXTCLAW_INSTALLER_NODE_VERSION ?? "22.20.0",
     outputDir: resolve(process.cwd(), "dist/installers"),
-    keepWorkdir: false
+    keepWorkdir: false,
+    packageSpec: process.env.NEXTCLAW_INSTALLER_PACKAGE_SPEC?.trim() || ""
   };
 
   for (const arg of argv) {
@@ -461,6 +486,10 @@ function parseArgs(argv) {
     }
     if (key === "work-dir") {
       options.workdir = resolve(process.cwd(), value);
+      continue;
+    }
+    if (key === "package-spec") {
+      options.packageSpec = value.trim();
       continue;
     }
     throw new Error(`Unknown argument key: --${key}`);

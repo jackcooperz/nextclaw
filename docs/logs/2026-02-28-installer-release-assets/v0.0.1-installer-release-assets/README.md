@@ -6,6 +6,7 @@
   - 触发条件增加 `push tags (v*)`，推送版本 tag 时可自动创建/更新 Release 并上传安装器。
   - 触发条件改为 `release.published`（发布 Release 后自动运行）。
   - `workflow_dispatch` 新增 `release_tag` 输入，支持对已存在 Release 手动补传安装器。
+  - 安装器构建改为直接使用 `nextclaw@<version>`（npm registry）作为输入，不再依赖仓库内 `pnpm install + pnpm build`，降低 CI 失败面并显著缩短时长。
   - 权限改为 `contents: write`，允许写入 Release Assets。
   - 在矩阵任务中新增 `asset_glob`，按平台/架构匹配产物。
   - 新增 `softprops/action-gh-release@v2` 上传步骤，将安装器和 manifest 直接上传到当前 Release。
