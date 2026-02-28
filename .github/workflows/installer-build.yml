@@ -2,12 +2,16 @@ name: installer-build
 
 on:
   workflow_dispatch:
-  push:
-    tags:
-      - "v*"
+    inputs:
+      release_tag:
+        description: "Release tag to upload assets to (for manual backfill), e.g. v0.8.41"
+        required: false
+        type: string
+  release:
+    types: [published]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build-installers:
@@ -20,19 +24,25 @@ jobs:
           - os: macos-14
             platform: darwin
             arch: arm64
+            asset_glob: dist/installers/*-beta-macos-arm64-installer.pkg
           - os: macos-14
             platform: darwin
             arch: x64
+            asset_glob: dist/installers/*-beta-macos-x64-installer.pkg
           - os: windows-latest
             platform: win32
             arch: x64
+            asset_glob: dist/installers/*-beta-windows-x64-installer.exe
           - os: windows-latest
             platform: win32
             arch: arm64
+            asset_glob: dist/installers/*-beta-windows-arm64-installer.exe
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.release_tag || github.ref_name }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -73,4 +83,15 @@ jobs:
           name: nextclaw-installer-${{ matrix.platform }}-${{ matrix.arch }}
           path: |
             dist/installers/*-beta-windows-${{ matrix.arch }}-installer.exe
+            dist/installers/manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
+
+      - name: Upload installers to release assets
+        if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.release_tag != '')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.event_name == 'release' && github.event.release.tag_name || github.event.inputs.release_tag }}
+          fail_on_unmatched_files: true
+          overwrite_files: true
+          files: |
+            ${{ matrix.asset_glob }}
             dist/installers/manifest-${{ matrix.platform }}-${{ matrix.arch }}.json
