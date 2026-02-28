@@ -597,9 +597,13 @@ export function getSessionHistory(configPath: string, key: string, limit?: numbe
   const safeLimit = typeof limit === "number" ? Math.min(500, Math.max(1, Math.trunc(limit))) : 200;
   const allMessages = session.messages;
   const messages = allMessages.length > safeLimit ? allMessages.slice(-safeLimit) : allMessages;
+  const safeEventLimit = Math.min(2000, Math.max(50, safeLimit * 4));
+  const allEvents = session.events ?? [];
+  const events = allEvents.length > safeEventLimit ? allEvents.slice(-safeEventLimit) : allEvents;
   return {
     key: normalizedKey,
     totalMessages: allMessages.length,
+    totalEvents: allEvents.length,
     metadata: session.metadata,
     messages: messages.map((message) => {
       const entry: Record<string, unknown> = {
@@ -620,6 +624,29 @@ export function getSessionHistory(configPath: string, key: string, limit?: numbe
         entry.reasoning_content = message.reasoning_content;
       }
       return entry as SessionHistoryView["messages"][number];
+    }),
+    events: events.map((event) => {
+      const entry: SessionHistoryView["events"][number] = {
+        seq: event.seq,
+        type: event.type,
+        timestamp: event.timestamp
+      };
+      const message = event.data?.message;
+      if (message && typeof message === "object" && !Array.isArray(message)) {
+        const typed = message as Record<string, unknown>;
+        if (typeof typed.role === "string" && typeof typed.timestamp === "string") {
+          entry.message = {
+            role: typed.role,
+            content: typed.content,
+            timestamp: typed.timestamp,
+            ...(typeof typed.name === "string" ? { name: typed.name } : {}),
+            ...(typeof typed.tool_call_id === "string" ? { tool_call_id: typed.tool_call_id } : {}),
+            ...(Array.isArray(typed.tool_calls) ? { tool_calls: typed.tool_calls as Array<Record<string, unknown>> } : {}),
+            ...(typeof typed.reasoning_content === "string" ? { reasoning_content: typed.reasoning_content } : {})
+          };
+        }
+      }
+      return entry;
     })
   };
 }

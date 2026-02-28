@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { SessionEntryView, SessionMessageView } from '@/api/types';
+import type { SessionEntryView, SessionEventView } from '@/api/types';
 import { sendChatTurnStream } from '@/api/config';
 import { useConfig, useDeleteSession, useSessionHistory, useSessions } from '@/hooks/useConfig';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { PageHeader, PageLayout } from '@/components/layout/page-layout';
 import { ChatThread } from '@/components/chat/ChatThread';
 import { cn } from '@/lib/utils';
+import { buildFallbackEventsFromMessages } from '@/lib/chat-message';
 import { formatDateTime, t } from '@/lib/i18n';
 import { MessageSquareText, Plus, RefreshCw, Search, Send, Trash2 } from 'lucide-react';
 
@@ -93,8 +94,9 @@ export function ChatPage() {
   const [draft, setDraft] = useState('');
   const [selectedSessionKey, setSelectedSessionKey] = useState<string | null>(() => readStoredSessionKey());
   const [selectedAgentId, setSelectedAgentId] = useState('main');
-  const [optimisticUserMessage, setOptimisticUserMessage] = useState<SessionMessageView | null>(null);
-  const [streamingAssistantMessage, setStreamingAssistantMessage] = useState<SessionMessageView | null>(null);
+  const [streamingSessionEvents, setStreamingSessionEvents] = useState<SessionEventView[]>([]);
+  const [streamingAssistantText, setStreamingAssistantText] = useState('');
+  const [streamingAssistantTimestamp, setStreamingAssistantTimestamp] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [queuedMessages, setQueuedMessages] = useState<PendingChatMessage[]>([]);
 
@@ -143,20 +145,32 @@ export function ChatPage() {
     [selectedSessionKey, sessions]
   );
 
-  const historyMessages = useMemo(() => historyQuery.data?.messages ?? [], [historyQuery.data?.messages]);
-  const mergedMessages = useMemo(() => {
-    if (!optimisticUserMessage && !streamingAssistantMessage) {
-      return historyMessages;
-    }
-    const next = [...historyMessages];
-    if (optimisticUserMessage) {
-      next.push(optimisticUserMessage);
-    }
-    if (streamingAssistantMessage) {
-      next.push(streamingAssistantMessage);
+  const historyData = historyQuery.data;
+  const historyMessages = historyData?.messages ?? [];
+  const historyEvents =
+    historyData?.events && historyData.events.length > 0
+      ? historyData.events
+      : buildFallbackEventsFromMessages(historyMessages);
+  const mergedEvents = useMemo(() => {
+    const next = [...historyEvents, ...streamingSessionEvents];
+    if (streamingAssistantText.trim()) {
+      const maxSeq = next.reduce((max, event) => {
+        const seq = Number.isFinite(event.seq) ? event.seq : 0;
+        return seq > max ? seq : max;
+      }, 0);
+      next.push({
+        seq: maxSeq + 1,
+        type: 'stream.assistant_delta',
+        timestamp: streamingAssistantTimestamp ?? new Date().toISOString(),
+        message: {
+          role: 'assistant',
+          content: streamingAssistantText,
+          timestamp: streamingAssistantTimestamp ?? new Date().toISOString()
+        }
+      });
     }
     return next;
-  }, [historyMessages, optimisticUserMessage, streamingAssistantMessage]);
+  }, [historyEvents, streamingAssistantText, streamingAssistantTimestamp, streamingSessionEvents]);
 
   useEffect(() => {
     if (!selectedSessionKey && filteredSessions.length > 0) {
@@ -188,7 +202,7 @@ export function ChatPage() {
       return;
     }
     element.scrollTop = element.scrollHeight;
-  }, [mergedMessages, isSending, selectedSessionKey]);
+  }, [mergedEvents, isSending, selectedSessionKey]);
 
   useEffect(() => {
     return () => {
@@ -200,10 +214,11 @@ export function ChatPage() {
     streamRunIdRef.current += 1;
     setIsSending(false);
     setQueuedMessages([]);
-    setStreamingAssistantMessage(null);
+    setStreamingSessionEvents([]);
+    setStreamingAssistantText('');
+    setStreamingAssistantTimestamp(null);
     const next = buildNewSessionKey(selectedAgentId);
     setSelectedSessionKey(next);
-    setOptimisticUserMessage(null);
   };
 
   const handleDeleteSession = async () => {
@@ -225,9 +240,10 @@ export function ChatPage() {
           streamRunIdRef.current += 1;
           setIsSending(false);
           setQueuedMessages([]);
-          setStreamingAssistantMessage(null);
+          setStreamingSessionEvents([]);
+          setStreamingAssistantText('');
+          setStreamingAssistantTimestamp(null);
           setSelectedSessionKey(null);
-          setOptimisticUserMessage(null);
           await sessionsQuery.refetch();
         }
       }
@@ -238,17 +254,15 @@ export function ChatPage() {
     streamRunIdRef.current += 1;
     const runId = streamRunIdRef.current;
 
-    setStreamingAssistantMessage(null);
-    setOptimisticUserMessage({
-      role: 'user',
-      content: item.message,
-      timestamp: new Date().toISOString()
-    });
+    setStreamingSessionEvents([]);
+    setStreamingAssistantText('');
+    setStreamingAssistantTimestamp(null);
     setIsSending(true);
 
     try {
       let streamText = '';
       const streamTimestamp = new Date().toISOString();
+      setStreamingAssistantTimestamp(streamTimestamp);
 
       const result = await sendChatTurnStream({
         message: item.message,
@@ -270,17 +284,30 @@ export function ChatPage() {
             return;
           }
           streamText += event.delta;
-          setStreamingAssistantMessage({
-            role: 'assistant',
-            content: streamText,
-            timestamp: streamTimestamp
+          setStreamingAssistantText(streamText);
+        },
+        onSessionEvent: (event) => {
+          if (runId !== streamRunIdRef.current) {
+            return;
+          }
+          setStreamingSessionEvents((prev) => {
+            const next = [...prev];
+            const hit = next.findIndex((item) => item.seq === event.data.seq);
+            if (hit >= 0) {
+              next[hit] = event.data;
+            } else {
+              next.push(event.data);
+            }
+            return next;
           });
+          if (event.data.message?.role === 'assistant') {
+            setStreamingAssistantText('');
+          }
         }
       });
       if (runId !== streamRunIdRef.current) {
         return;
       }
-      setOptimisticUserMessage(null);
       if (result.sessionKey !== item.sessionKey) {
         setSelectedSessionKey(result.sessionKey);
       }
@@ -289,7 +316,9 @@ export function ChatPage() {
       if (!activeSessionKey || activeSessionKey === item.sessionKey || activeSessionKey === result.sessionKey) {
         await historyQuery.refetch();
       }
-      setStreamingAssistantMessage(null);
+      setStreamingSessionEvents([]);
+      setStreamingAssistantText('');
+      setStreamingAssistantTimestamp(null);
       setIsSending(false);
     } catch {
       if (runId !== streamRunIdRef.current) {
@@ -297,8 +326,9 @@ export function ChatPage() {
       }
       streamRunIdRef.current += 1;
       setIsSending(false);
-      setStreamingAssistantMessage(null);
-      setOptimisticUserMessage(null);
+      setStreamingSessionEvents([]);
+      setStreamingAssistantText('');
+      setStreamingAssistantTimestamp(null);
       if (options?.restoreDraftOnError) {
         setDraft((prev) => prev.trim().length === 0 ? item.message : prev);
       }
@@ -486,10 +516,10 @@ export function ChatPage() {
               <div className="text-sm text-gray-500">{t('chatHistoryLoading')}</div>
             ) : (
               <>
-                {mergedMessages.length === 0 ? (
+                {mergedEvents.length === 0 ? (
                   <div className="text-sm text-gray-500">{t('chatNoMessages')}</div>
                 ) : (
-                  <ChatThread messages={mergedMessages} isSending={isSending && !streamingAssistantMessage} />
+                  <ChatThread events={mergedEvents} isSending={isSending && !streamingAssistantText.trim()} />
                 )}
               </>
             )}

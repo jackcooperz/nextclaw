@@ -887,6 +887,23 @@ export class ServiceCommands {
           const resolved = resolveChatTurnParams(params);
           type StreamEvent =
             | { type: "delta"; delta: string }
+            | {
+                type: "session_event";
+                event: {
+                  seq: number;
+                  type: string;
+                  timestamp: string;
+                  message?: {
+                    role: string;
+                    content: unknown;
+                    timestamp: string;
+                    name?: string;
+                    tool_call_id?: string;
+                    tool_calls?: Array<Record<string, unknown>>;
+                    reasoning_content?: string;
+                  };
+                };
+              }
             | { type: "final"; result: ReturnType<typeof buildTurnResult> }
             | { type: "error"; error: string };
           const queue: StreamEvent[] = [];
@@ -911,6 +928,43 @@ export class ServiceCommands {
                   return;
                 }
                 push({ type: "delta", delta });
+              },
+              onSessionEvent: (event) => {
+                const raw = event.data?.message;
+                const messageRecord =
+                  raw && typeof raw === "object" && !Array.isArray(raw)
+                    ? (raw as Record<string, unknown>)
+                    : null;
+                const message =
+                  messageRecord && typeof messageRecord.role === "string"
+                    ? {
+                        role: messageRecord.role,
+                        content: messageRecord.content,
+                        timestamp:
+                          typeof messageRecord.timestamp === "string"
+                            ? messageRecord.timestamp
+                            : event.timestamp,
+                        ...(typeof messageRecord.name === "string" ? { name: messageRecord.name } : {}),
+                        ...(typeof messageRecord.tool_call_id === "string"
+                          ? { tool_call_id: messageRecord.tool_call_id }
+                          : {}),
+                        ...(Array.isArray(messageRecord.tool_calls)
+                          ? { tool_calls: messageRecord.tool_calls as Array<Record<string, unknown>> }
+                          : {}),
+                        ...(typeof messageRecord.reasoning_content === "string"
+                          ? { reasoning_content: messageRecord.reasoning_content }
+                          : {})
+                      }
+                    : undefined;
+                push({
+                  type: "session_event",
+                  event: {
+                    seq: event.seq,
+                    type: event.type,
+                    timestamp: event.timestamp,
+                    ...(message ? { message } : {})
+                  }
+                });
               }
             })
             .then((reply) => {

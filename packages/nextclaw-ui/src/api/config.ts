@@ -21,7 +21,8 @@ import type {
   CronRunRequest,
   CronActionResult,
   ChatTurnStreamReadyEvent,
-  ChatTurnStreamDeltaEvent
+  ChatTurnStreamDeltaEvent,
+  ChatTurnStreamSessionEvent
 } from './types';
 
 // GET /api/config
@@ -200,6 +201,7 @@ type ChatTurnStreamOptions = {
   signal?: AbortSignal;
   onReady?: (event: ChatTurnStreamReadyEvent) => void;
   onDelta?: (event: ChatTurnStreamDeltaEvent) => void;
+  onSessionEvent?: (event: ChatTurnStreamSessionEvent) => void;
 };
 
 type SseParsedEvent = {
@@ -300,6 +302,17 @@ export async function sendChatTurnStream(
         }
       } catch {
         // ignore malformed delta event payload
+      }
+      return;
+    }
+    if (parsed.event === 'session_event') {
+      try {
+        options.onSessionEvent?.({
+          event: 'session_event',
+          data: JSON.parse(parsed.data)
+        });
+      } catch {
+        // ignore malformed session_event payload
       }
       return;
     }

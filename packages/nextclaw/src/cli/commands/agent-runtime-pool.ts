@@ -3,6 +3,7 @@ import {
   AgentRouteResolver,
   getWorkspacePath,
   parseAgentScopedSessionKey,
+  type SessionEvent,
   type Config,
   type CronService,
   type ExtensionRegistry,
@@ -138,6 +139,7 @@ export class GatewayAgentRuntimePool {
     metadata?: Record<string, unknown>;
     agentId?: string;
     onAssistantDelta?: (delta: string) => void;
+    onSessionEvent?: (event: SessionEvent) => void;
   }): Promise<string> {
     const message: InboundMessage = {
       channel: params.channel ?? "cli",
@@ -162,7 +164,8 @@ export class GatewayAgentRuntimePool {
       channel: message.channel,
       chatId: message.chatId,
       metadata: message.metadata,
-      onAssistantDelta: params.onAssistantDelta
+      onAssistantDelta: params.onAssistantDelta,
+      onSessionEvent: params.onSessionEvent
     });
   }
 

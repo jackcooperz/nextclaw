@@ -138,9 +138,23 @@ const truncateHistoryText = (text: string): { text: string; truncated: boolean }
   return { text: `${text.slice(0, HISTORY_TEXT_MAX_CHARS)}\n…(truncated)…`, truncated: true };
 };
 
-const sanitizeHistoryMessage = (msg: { role: string; content: string; timestamp: string }) => {
-  const entry = { ...msg };
-  const res = truncateHistoryText(entry.content ?? "");
+const normalizeHistoryContent = (content: unknown): string => {
+  if (typeof content === "string") {
+    return content;
+  }
+  if (content == null) {
+    return "";
+  }
+  try {
+    return JSON.stringify(content, null, 2);
+  } catch {
+    return String(content);
+  }
+};
+
+const sanitizeHistoryMessage = (msg: { role: string; content: unknown; timestamp: string }) => {
+  const entry = { ...msg, content: normalizeHistoryContent(msg.content) };
+  const res = truncateHistoryText(entry.content);
   return { message: { ...entry, content: res.text }, truncated: res.truncated };
 };
 

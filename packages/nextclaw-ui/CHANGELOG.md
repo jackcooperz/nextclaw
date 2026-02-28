@@ -1,5 +1,21 @@
 # @nextclaw/ui
 
+## 0.5.28
+
+### Patch Changes
+
+- Introduce event-backed chat storage and event-sequence rendering for UI chat:
+  - persist session events (single-write) and project legacy messages from events
+  - stream `session_event` frames alongside text deltas in chat SSE
+  - render chat by ordered event timeline, merging tool call/result/follow-up in one assistant flow card
+  - keep true streaming text while preserving event-order semantics
+
+## 0.5.27
+
+### Patch Changes
+
+- Release frontend UI changes only.
+
 ## 0.5.26
 
 ### Patch Changes

@@ -81,11 +81,20 @@ export type SessionMessageView = {
   reasoning_content?: string;
 };
 
+export type SessionEventView = {
+  seq: number;
+  type: string;
+  timestamp: string;
+  message?: SessionMessageView;
+};
+
 export type SessionHistoryView = {
   key: string;
   totalMessages: number;
+  totalEvents: number;
   metadata: Record<string, unknown>;
   messages: SessionMessageView[];
+  events: SessionEventView[];
 };
 
 export type SessionPatchUpdate = {
@@ -123,6 +132,11 @@ export type ChatTurnStreamReadyEvent = {
 export type ChatTurnStreamDeltaEvent = {
   event: "delta";
   delta: string;
+};
+
+export type ChatTurnStreamSessionEvent = {
+  event: "session_event";
+  data: SessionEventView;
 };
 
 export type ChatTurnStreamFinalEvent = {

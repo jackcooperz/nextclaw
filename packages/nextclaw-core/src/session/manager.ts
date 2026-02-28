@@ -4,18 +4,42 @@ import { safeFilename, getSessionsPath } from "../utils/helpers.js";
 
 export type SessionMessage = {
   role: string;
-  content: string;
+  content: unknown;
   timestamp: string;
   [key: string]: unknown;
+};
+
+export type SessionEvent = {
+  seq: number;
+  type: string;
+  timestamp: string;
+  data: Record<string, unknown>;
 };
 
 export type Session = {
   key: string;
   messages: SessionMessage[];
+  events: SessionEvent[];
+  nextSeq: number;
   createdAt: Date;
   updatedAt: Date;
   metadata: Record<string, unknown>;
 };
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value) && typeof value === "object" && !Array.isArray(value);
+}
+
+function toIsoString(value: unknown, fallback: string): string {
+  if (typeof value !== "string") {
+    return fallback;
+  }
+  const parsed = Date.parse(value);
+  if (!Number.isFinite(parsed)) {
+    return fallback;
+  }
+  return new Date(parsed).toISOString();
+}
 
 export class SessionManager {
   private sessionsDir: string;
@@ -39,6 +63,8 @@ export class SessionManager {
     const session = loaded ?? {
       key,
       messages: [],
+      events: [],
+      nextSeq: 1,
       createdAt: new Date(),
       updatedAt: new Date(),
       metadata: {}
@@ -59,15 +85,47 @@ export class SessionManager {
     return loaded;
   }
 
-  addMessage(session: Session, role: string, content: string, extra: Record<string, unknown> = {}): void {
+  appendEvent(
+    session: Session,
+    params: {
+      type: string;
+      data?: Record<string, unknown>;
+      timestamp?: string;
+    }
+  ): SessionEvent {
+    const timestamp = toIsoString(params.timestamp, new Date().toISOString());
+    const event: SessionEvent = {
+      seq: session.nextSeq,
+      type: params.type,
+      timestamp,
+      data: params.data ?? {}
+    };
+    session.nextSeq += 1;
+    session.events.push(event);
+
+    const projected = this.projectMessageFromEvent(event);
+    if (projected) {
+      session.messages.push(projected);
+    }
+
+    session.updatedAt = new Date(timestamp);
+    return event;
+  }
+
+  addMessage(session: Session, role: string, content: unknown, extra: Record<string, unknown> = {}): SessionEvent {
     const msg: SessionMessage = {
       role,
       content,
       timestamp: new Date().toISOString(),
       ...extra
     };
-    session.messages.push(msg);
-    session.updatedAt = new Date();
+
+    const eventType = this.resolveMessageEventType(msg);
+    return this.appendEvent(session, {
+      type: eventType,
+      timestamp: msg.timestamp,
+      data: { message: msg }
+    });
   }
 
   getHistory(session: Session, maxMessages = 50): Array<Record<string, unknown>> {
@@ -157,8 +215,54 @@ export class SessionManager {
   }
 
   clear(session: Session): void {
+    session.events = [];
     session.messages = [];
+    session.nextSeq = 1;
     session.updatedAt = new Date();
+  }
+
+  private projectMessageFromEvent(event: SessionEvent): SessionMessage | null {
+    const source = isRecord(event.data.message)
+      ? event.data.message
+      : isRecord(event.data)
+        ? event.data
+        : null;
+    if (!source) {
+      return null;
+    }
+
+    const role = typeof source.role === "string" ? source.role : "";
+    if (!role) {
+      return null;
+    }
+
+    const timestamp = toIsoString(source.timestamp, event.timestamp);
+    return {
+      ...source,
+      role,
+      timestamp,
+      content: Object.prototype.hasOwnProperty.call(source, "content") ? source.content : ""
+    };
+  }
+
+  private resolveMessageEventType(message: SessionMessage): string {
+    const role = typeof message.role === "string" ? message.role.trim().toLowerCase() : "";
+    if (role === "assistant" && Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+      return "assistant.tool_call";
+    }
+    if (role === "tool") {
+      return "tool.result";
+    }
+    if (role === "assistant") {
+      return "message.assistant";
+    }
+    if (role === "user") {
+      return "message.user";
+    }
+    if (role === "system") {
+      return "message.system";
+    }
+    return `message.${role || "other"}`;
   }
 
   private load(key: string): Session | null {
@@ -168,10 +272,12 @@ export class SessionManager {
     }
     try {
       const lines = readFileSync(path, "utf-8").split("\n").filter(Boolean);
-      const messages: SessionMessage[] = [];
+      const events: SessionEvent[] = [];
       let metadata: Record<string, unknown> = {};
       let createdAt = new Date();
       let updatedAt = new Date();
+      let fallbackSeq = 1;
+
       for (const line of lines) {
         const data = JSON.parse(line) as Record<string, unknown>;
         if (data._type === "metadata") {
@@ -182,13 +288,61 @@ export class SessionManager {
           if (data.updated_at) {
             updatedAt = new Date(String(data.updated_at));
           }
-        } else {
-          messages.push(data as SessionMessage);
+          continue;
         }
+
+        if (data._type === "event") {
+          const rawSeq = Number(data.seq);
+          const seq = Number.isFinite(rawSeq) && rawSeq > 0 ? Math.trunc(rawSeq) : fallbackSeq;
+          const timestamp = toIsoString(data.timestamp, new Date().toISOString());
+          const type = typeof data.type === "string" && data.type.trim() ? data.type.trim() : "message.other";
+          const payload = isRecord(data.data) ? data.data : {};
+          events.push({ seq, type, timestamp, data: payload });
+          fallbackSeq = Math.max(fallbackSeq, seq + 1);
+          continue;
+        }
+
+        // Legacy transcript line (message-only): migrate in-memory to event format.
+        const legacyRole = typeof data.role === "string" ? data.role : "assistant";
+        const legacyTimestamp = toIsoString(data.timestamp, new Date().toISOString());
+        const message = {
+          ...data,
+          role: legacyRole,
+          timestamp: legacyTimestamp,
+          content: Object.prototype.hasOwnProperty.call(data, "content") ? data.content : ""
+        } as SessionMessage;
+        const type = this.resolveMessageEventType(message);
+        events.push({
+          seq: fallbackSeq,
+          type,
+          timestamp: legacyTimestamp,
+          data: { message }
+        });
+        fallbackSeq += 1;
       }
+
+      events.sort((left, right) => {
+        if (left.seq !== right.seq) {
+          return left.seq - right.seq;
+        }
+        return Date.parse(left.timestamp) - Date.parse(right.timestamp);
+      });
+
+      const messages = events
+        .map((event) => this.projectMessageFromEvent(event))
+        .filter((message): message is SessionMessage => Boolean(message));
+
+      const latestTs = events.length > 0 ? events[events.length - 1]?.timestamp : null;
+      if (latestTs) {
+        updatedAt = new Date(latestTs);
+      }
+      const nextSeq = events.reduce((maxSeq, event) => Math.max(maxSeq, event.seq), 0) + 1;
+
       return {
         key,
         messages,
+        events,
+        nextSeq,
         createdAt,
         updatedAt,
         metadata
@@ -206,7 +360,16 @@ export class SessionManager {
       updated_at: session.updatedAt.toISOString(),
       metadata: session.metadata
     };
-    const lines = [JSON.stringify(metadataLine), ...session.messages.map((msg) => JSON.stringify(msg))].join("\n");
+    const eventLines = session.events.map((event) =>
+      JSON.stringify({
+        _type: "event",
+        seq: event.seq,
+        type: event.type,
+        timestamp: event.timestamp,
+        data: event.data
+      })
+    );
+    const lines = [JSON.stringify(metadataLine), ...eventLines].join("\n");
     writeFileSync(path, `${lines}\n`);
     this.cache.set(session.key, session);
   }

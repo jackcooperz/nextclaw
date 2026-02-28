@@ -15,7 +15,7 @@ import { MemorySearchTool, MemoryGetTool } from "./tools/memory.js";
 import { GatewayTool, type GatewayController } from "./tools/gateway.js";
 import { SubagentsTool } from "./tools/subagents.js";
 import { SubagentManager } from "./subagent.js";
-import { SessionManager } from "../session/manager.js";
+import { SessionManager, type SessionEvent } from "../session/manager.js";
 import type { CronService } from "../cron/service.js";
 import type { Config } from "../config/schema.js";
 import { evaluateSilentReply } from "./silent-reply-policy.js";
@@ -33,6 +33,7 @@ type MessageToolHintsResolver = (params: {
 }) => string[];
 
 type AssistantDeltaHandler = (delta: string) => void;
+type SessionEventHandler = (event: SessionEvent) => void;
 
 export class AgentLoop {
   private context: ContextBuilder;
@@ -268,6 +269,7 @@ export class AgentLoop {
     chatId?: string;
     metadata?: Record<string, unknown>;
     onAssistantDelta?: AssistantDeltaHandler;
+    onSessionEvent?: SessionEventHandler;
   }): Promise<string> {
     const msg: InboundMessage = {
       channel: params.channel ?? "cli",
@@ -279,7 +281,8 @@ export class AgentLoop {
       metadata: params.metadata ?? {}
     };
     const response = await this.processMessage(msg, params.sessionKey, {
-      onAssistantDelta: params.onAssistantDelta
+      onAssistantDelta: params.onAssistantDelta,
+      onSessionEvent: params.onSessionEvent
     });
     return response?.content ?? "";
   }
@@ -425,7 +428,7 @@ export class AgentLoop {
   private async processMessage(
     msg: InboundMessage,
     sessionKeyOverride?: string,
-    options?: { onAssistantDelta?: AssistantDeltaHandler }
+    options?: { onAssistantDelta?: AssistantDeltaHandler; onSessionEvent?: SessionEventHandler }
   ): Promise<OutboundMessage | null> {
     if (msg.channel === "system") {
       return this.processSystemMessage(msg, sessionKeyOverride, options);
@@ -510,7 +513,7 @@ export class AgentLoop {
       sessionKey,
       messageToolHints
     });
-    this.sessions.addMessage(session, "user", msg.content);
+    options?.onSessionEvent?.(this.sessions.addMessage(session, "user", msg.content));
 
     let iteration = 0;
     let finalContent: string | null = null;
@@ -529,7 +532,7 @@ export class AgentLoop {
       }, options?.onAssistantDelta);
 
       if (containsSilentReplyMarker(response.content)) {
-        this.sessions.addMessage(session, "assistant", response.content ?? "");
+        options?.onSessionEvent?.(this.sessions.addMessage(session, "assistant", response.content ?? ""));
         this.sessions.save(session);
         return null;
       }
@@ -544,19 +547,19 @@ export class AgentLoop {
           }
         }));
         this.context.addAssistantMessage(messages, response.content, toolCallDicts, response.reasoningContent ?? null);
-        this.sessions.addMessage(session, "assistant", response.content ?? "", {
+        options?.onSessionEvent?.(this.sessions.addMessage(session, "assistant", response.content ?? "", {
           tool_calls: toolCallDicts,
           reasoning_content: response.reasoningContent ?? null
-        });
+        }));
         for (const call of response.toolCalls) {
           const result = await this.tools.execute(call.name, call.arguments, call.id);
           lastToolName = call.name;
           lastToolResult = result;
           this.context.addToolResult(messages, call.id, call.name, result);
-          this.sessions.addMessage(session, "tool", result, {
+          options?.onSessionEvent?.(this.sessions.addMessage(session, "tool", result, {
             tool_call_id: call.id,
             name: call.name
-          });
+          }));
         }
       } else {
         finalContent = response.content;
@@ -584,7 +587,7 @@ export class AgentLoop {
     }
     finalContent = finalReplyDecision.content;
 
-    this.sessions.addMessage(session, "assistant", finalContent);
+    options?.onSessionEvent?.(this.sessions.addMessage(session, "assistant", finalContent));
     this.sessions.save(session);
 
     return {
@@ -600,7 +603,7 @@ export class AgentLoop {
   private async processSystemMessage(
     msg: InboundMessage,
     sessionKeyOverride?: string,
-    options?: { onAssistantDelta?: AssistantDeltaHandler }
+    options?: { onAssistantDelta?: AssistantDeltaHandler; onSessionEvent?: SessionEventHandler }
   ): Promise<OutboundMessage | null> {
     const separator = msg.chatId.indexOf(":");
     const originChannel = separator > 0 ? msg.chatId.slice(0, separator) : "cli";
@@ -661,7 +664,9 @@ export class AgentLoop {
       sessionKey,
       messageToolHints
     });
-    this.sessions.addMessage(session, "user", `[System: ${msg.senderId}] ${msg.content}`);
+    options?.onSessionEvent?.(
+      this.sessions.addMessage(session, "user", `[System: ${msg.senderId}] ${msg.content}`)
+    );
 
     let iteration = 0;
     let finalContent: string | null = null;
@@ -680,7 +685,7 @@ export class AgentLoop {
       }, options?.onAssistantDelta);
 
       if (containsSilentReplyMarker(response.content)) {
-        this.sessions.addMessage(session, "assistant", response.content ?? "");
+        options?.onSessionEvent?.(this.sessions.addMessage(session, "assistant", response.content ?? ""));
         this.sessions.save(session);
         return null;
       }
@@ -695,19 +700,19 @@ export class AgentLoop {
           }
         }));
         this.context.addAssistantMessage(messages, response.content, toolCallDicts, response.reasoningContent ?? null);
-        this.sessions.addMessage(session, "assistant", response.content ?? "", {
+        options?.onSessionEvent?.(this.sessions.addMessage(session, "assistant", response.content ?? "", {
           tool_calls: toolCallDicts,
           reasoning_content: response.reasoningContent ?? null
-        });
+        }));
         for (const call of response.toolCalls) {
           const result = await this.tools.execute(call.name, call.arguments, call.id);
           lastToolName = call.name;
           lastToolResult = result;
           this.context.addToolResult(messages, call.id, call.name, result);
-          this.sessions.addMessage(session, "tool", result, {
+          options?.onSessionEvent?.(this.sessions.addMessage(session, "tool", result, {
             tool_call_id: call.id,
             name: call.name
-          });
+          }));
         }
       } else {
         finalContent = response.content;
@@ -734,7 +739,7 @@ export class AgentLoop {
     }
     finalContent = finalReplyDecision.content;
 
-    this.sessions.addMessage(session, "assistant", finalContent);
+    options?.onSessionEvent?.(this.sessions.addMessage(session, "assistant", finalContent));
     this.sessions.save(session);
 
     return {

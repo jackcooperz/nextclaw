@@ -1,4 +1,4 @@
-import type { SessionMessageView } from '@/api/types';
+import type { SessionEventView, SessionMessageView } from '@/api/types';
 
 export type ChatRole = 'user' | 'assistant' | 'tool' | 'system' | 'other';
 
@@ -11,14 +11,28 @@ export type ToolCard = {
   hasResult?: boolean;
 };
 
-export type GroupedChatMessage = {
+export type ChatTimelineMessageItem = {
+  kind: 'message';
   key: string;
   role: ChatRole;
-  messages: SessionMessageView[];
   timestamp: string;
+  message: SessionMessageView;
 };
 
-const MERGE_WINDOW_MS = 2 * 60 * 1000;
+export type ChatTimelineAssistantFlowItem = {
+  kind: 'assistant_flow';
+  key: string;
+  role: 'assistant';
+  timestamp: string;
+  primaryText: string;
+  primaryReasoning: string;
+  followupText: string;
+  followupReasoning: string;
+  toolCards: ToolCard[];
+};
+
+export type ChatTimelineItem = ChatTimelineMessageItem | ChatTimelineAssistantFlowItem;
+
 const TOOL_DETAIL_FIELDS = ['cmd', 'command', 'query', 'q', 'path', 'url', 'to', 'channel', 'agentId', 'sessionKey'];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -104,30 +118,6 @@ function hasToolCalls(message: SessionMessageView): boolean {
   return Array.isArray(message.tool_calls) && message.tool_calls.length > 0;
 }
 
-function mergeMessageContent(base: unknown, addition: unknown): unknown {
-  const left = extractMessageText(base).trim();
-  const right = extractMessageText(addition).trim();
-  if (!left) {
-    return right;
-  }
-  if (!right) {
-    return left;
-  }
-  return `${left}\n\n${right}`;
-}
-
-function mergeReasoningContent(base: unknown, addition: unknown): string | undefined {
-  const left = typeof base === 'string' ? base.trim() : '';
-  const right = typeof addition === 'string' ? addition.trim() : '';
-  if (!left) {
-    return right || undefined;
-  }
-  if (!right) {
-    return left;
-  }
-  return `${left}\n\n${right}`;
-}
-
 export function normalizeChatRole(message: Pick<SessionMessageView, 'role' | 'name' | 'tool_call_id' | 'tool_calls'>): ChatRole {
   const role = message.role.toLowerCase().trim();
   if (role === 'user') {
@@ -177,7 +167,7 @@ export function extractMessageText(content: unknown): string {
   return stringifyUnknown(content);
 }
 
-export function extractToolCards(message: SessionMessageView): ToolCard[] {
+function buildToolCallCards(message: SessionMessageView): ToolCard[] {
   const cards: ToolCard[] = [];
   const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
   for (const call of toolCalls) {
@@ -187,176 +177,202 @@ export function extractToolCards(message: SessionMessageView): ToolCard[] {
     const fn = isRecord(call.function) ? call.function : null;
     const name = toToolName(fn?.name ?? call.name);
     const args = fn?.arguments ?? call.arguments;
-    const resultText = typeof call.result_text === 'string' ? call.result_text.trim() : '';
-    const hasResult = call.has_result === true || typeof call.result_text === 'string';
     cards.push({
       kind: 'call',
       name,
       detail: summarizeToolArgs(args),
-      callId: typeof call.id === 'string' ? call.id : undefined,
-      text: resultText,
-      hasResult
+      callId: typeof call.id === 'string' && call.id.trim() ? call.id : undefined,
+      hasResult: false
     });
   }
+  return cards;
+}
 
+export function extractToolCards(message: SessionMessageView): ToolCard[] {
+  const cards = buildToolCallCards(message);
   const role = normalizeChatRole(message);
   if (role === 'tool' || typeof message.tool_call_id === 'string') {
-    const text = extractMessageText(message.content).trim();
     cards.push({
       kind: 'result',
       name: toToolName(message.name ?? cards[0]?.name),
-      text,
+      text: extractMessageText(message.content).trim(),
       callId: typeof message.tool_call_id === 'string' ? message.tool_call_id : undefined,
       hasResult: true
     });
   }
-
   return cards;
 }
 
-type ToolResultBucket = {
-  name?: string;
-  texts: string[];
-};
-
-function cloneMessageForMerge(message: SessionMessageView): SessionMessageView {
+function normalizeEvent(event: SessionEventView, index: number): SessionEventView & { _idx: number; _seq: number } {
+  const seq = Number.isFinite(event.seq) && event.seq > 0 ? Math.trunc(event.seq) : index + 1;
+  const timestamp =
+    typeof event.timestamp === 'string' && event.timestamp
+      ? event.timestamp
+      : event.message?.timestamp ?? new Date().toISOString();
   return {
-    ...message,
-    tool_calls: Array.isArray(message.tool_calls)
-      ? message.tool_calls.map((call) => (isRecord(call) ? { ...call } : call))
-      : message.tool_calls
+    ...event,
+    timestamp,
+    _idx: index,
+    _seq: seq
   };
 }
 
-export function combineToolCallAndResults(messages: SessionMessageView[]): SessionMessageView[] {
-  const cloned = messages.map(cloneMessageForMerge);
-  const resultByCallId = new Map<string, ToolResultBucket>();
-
-  for (const message of cloned) {
-    if (normalizeChatRole(message) !== 'tool') {
-      continue;
-    }
-    if (typeof message.tool_call_id !== 'string' || !message.tool_call_id.trim()) {
-      continue;
-    }
-
-    const callId = message.tool_call_id.trim();
-    const text = extractMessageText(message.content).trim();
-    const existing = resultByCallId.get(callId) ?? { texts: [] };
-    if (typeof message.name === 'string' && message.name.trim()) {
-      existing.name = message.name.trim();
-    }
-    existing.texts.push(text);
-    resultByCallId.set(callId, existing);
+function inferEventTypeFromMessage(message: SessionMessageView): string {
+  const role = normalizeChatRole(message);
+  if (role === 'assistant' && hasToolCalls(message)) {
+    return 'assistant.tool_call';
   }
-
-  const consumedCallIds = new Set<string>();
-
-  for (const message of cloned) {
-    if (normalizeChatRole(message) !== 'assistant' || !hasToolCalls(message)) {
-      continue;
-    }
-
-    const toolCalls = Array.isArray(message.tool_calls) ? message.tool_calls : [];
-    message.tool_calls = toolCalls.map((call) => {
-      if (!isRecord(call) || typeof call.id !== 'string') {
-        return call;
-      }
-      const result = resultByCallId.get(call.id);
-      if (!result) {
-        return call;
-      }
-      consumedCallIds.add(call.id);
-      return {
-        ...call,
-        result_text: result.texts.filter(Boolean).join('\n\n'),
-        has_result: true,
-        result_name: result.name
-      };
-    }) as Array<Record<string, unknown>>;
+  if (role === 'tool') {
+    return 'tool.result';
   }
-
-  const mergedToolResults = cloned.filter((message) => {
-    if (normalizeChatRole(message) !== 'tool') {
-      return true;
-    }
-    if (typeof message.tool_call_id !== 'string' || !message.tool_call_id.trim()) {
-      return true;
-    }
-    return !consumedCallIds.has(message.tool_call_id.trim());
-  });
-
-  const mergedFollowups: SessionMessageView[] = [];
-  for (let index = 0; index < mergedToolResults.length; index += 1) {
-    const current = mergedToolResults[index];
-    if (normalizeChatRole(current) !== 'assistant' || !hasToolCalls(current)) {
-      mergedFollowups.push(current);
-      continue;
-    }
-
-    let merged = current;
-    let cursor = index + 1;
-    while (cursor < mergedToolResults.length) {
-      const candidate = mergedToolResults[cursor];
-      if (normalizeChatRole(candidate) !== 'assistant') {
-        break;
-      }
-      if (hasToolCalls(candidate) || typeof candidate.tool_call_id === 'string') {
-        break;
-      }
-
-      const candidateText = extractMessageText(candidate.content).trim();
-      const candidateReasoning = typeof candidate.reasoning_content === 'string' && candidate.reasoning_content.trim();
-      if (!candidateText && !candidateReasoning) {
-        break;
-      }
-
-      merged = {
-        ...merged,
-        content: mergeMessageContent(merged.content, candidate.content),
-        reasoning_content: mergeReasoningContent(merged.reasoning_content, candidate.reasoning_content),
-        timestamp: candidate.timestamp
-      };
-      cursor += 1;
-    }
-
-    mergedFollowups.push(merged);
-    index = cursor - 1;
-  }
-
-  return mergedFollowups;
+  return `message.${role}`;
 }
 
-export function groupChatMessages(messages: SessionMessageView[]): GroupedChatMessage[] {
-  const groups: GroupedChatMessage[] = [];
-  let lastTs = 0;
+export function buildFallbackEventsFromMessages(messages: SessionMessageView[]): SessionEventView[] {
+  return messages.map((message, index) => ({
+    seq: index + 1,
+    type: inferEventTypeFromMessage(message),
+    timestamp: message.timestamp,
+    message
+  }));
+}
 
-  for (let index = 0; index < messages.length; index += 1) {
-    const message = messages[index];
-    const role = normalizeChatRole(message);
-    const parsedTs = Date.parse(message.timestamp);
-    const ts = Number.isFinite(parsedTs) ? parsedTs : Date.now();
-    const previous = groups[groups.length - 1];
-    const canMerge =
-      previous &&
-      previous.role === role &&
-      Math.abs(ts - lastTs) <= MERGE_WINDOW_MS;
+function appendText(base: string, next: string): string {
+  if (!next) {
+    return base;
+  }
+  if (!base) {
+    return next;
+  }
+  return `${base}\n\n${next}`;
+}
 
-    if (canMerge) {
-      previous.messages.push(message);
-      previous.timestamp = message.timestamp;
-      lastTs = ts;
+export function buildChatTimeline(events: SessionEventView[]): ChatTimelineItem[] {
+  const normalized = events
+    .map((event, index) => normalizeEvent(event, index))
+    .sort((left, right) => {
+      if (left._seq !== right._seq) {
+        return left._seq - right._seq;
+      }
+      const leftTs = Date.parse(left.timestamp);
+      const rightTs = Date.parse(right.timestamp);
+      if (Number.isFinite(leftTs) && Number.isFinite(rightTs) && leftTs !== rightTs) {
+        return leftTs - rightTs;
+      }
+      return left._idx - right._idx;
+    });
+
+  const timeline: ChatTimelineItem[] = [];
+  let activeFlow:
+    | {
+        item: ChatTimelineAssistantFlowItem;
+        cardByCallId: Map<string, ToolCard>;
+        pendingCallIds: Set<string>;
+        awaitingFollowup: boolean;
+      }
+    | null = null;
+
+  const closeActiveFlow = () => {
+    activeFlow = null;
+  };
+
+  for (const event of normalized) {
+    const message = event.message;
+    if (!message) {
       continue;
     }
 
-    groups.push({
-      key: `${message.timestamp}-${index}-${role}`,
+    const role = normalizeChatRole(message);
+    const timestamp =
+      typeof message.timestamp === 'string' && message.timestamp
+        ? message.timestamp
+        : event.timestamp;
+
+    if (role === 'assistant' && hasToolCalls(message)) {
+      closeActiveFlow();
+      const toolCards = buildToolCallCards(message);
+      const item: ChatTimelineAssistantFlowItem = {
+        kind: 'assistant_flow',
+        key: `flow-${event._seq}-${event._idx}`,
+        role: 'assistant',
+        timestamp,
+        primaryText: extractMessageText(message.content).trim(),
+        primaryReasoning:
+          typeof message.reasoning_content === 'string' ? message.reasoning_content.trim() : '',
+        followupText: '',
+        followupReasoning: '',
+        toolCards
+      };
+
+      const cardByCallId = new Map<string, ToolCard>();
+      const pendingCallIds = new Set<string>();
+      for (const card of toolCards) {
+        if (typeof card.callId === 'string' && card.callId.trim()) {
+          cardByCallId.set(card.callId, card);
+          pendingCallIds.add(card.callId);
+        }
+      }
+
+      timeline.push(item);
+      activeFlow = {
+        item,
+        cardByCallId,
+        pendingCallIds,
+        awaitingFollowup: pendingCallIds.size === 0
+      };
+      continue;
+    }
+
+    if (role === 'tool') {
+      const callId =
+        typeof message.tool_call_id === 'string' && message.tool_call_id.trim()
+          ? message.tool_call_id.trim()
+          : undefined;
+      if (activeFlow && callId && activeFlow.cardByCallId.has(callId)) {
+        const card = activeFlow.cardByCallId.get(callId)!;
+        const resultText = extractMessageText(message.content).trim();
+        card.text = appendText(card.text ?? '', resultText);
+        card.hasResult = true;
+        if (typeof message.name === 'string' && message.name.trim()) {
+          card.name = message.name.trim();
+        }
+        activeFlow.pendingCallIds.delete(callId);
+        activeFlow.awaitingFollowup = activeFlow.pendingCallIds.size === 0;
+        activeFlow.item.timestamp = timestamp;
+        continue;
+      }
+
+      timeline.push({
+        kind: 'message',
+        key: `message-${event._seq}-${event._idx}`,
+        role,
+        timestamp,
+        message
+      });
+      closeActiveFlow();
+      continue;
+    }
+
+    if (role === 'assistant' && activeFlow && activeFlow.awaitingFollowup && !hasToolCalls(message)) {
+      const text = extractMessageText(message.content).trim();
+      const reasoning =
+        typeof message.reasoning_content === 'string' ? message.reasoning_content.trim() : '';
+      activeFlow.item.followupText = appendText(activeFlow.item.followupText, text);
+      activeFlow.item.followupReasoning = appendText(activeFlow.item.followupReasoning, reasoning);
+      activeFlow.item.timestamp = timestamp;
+      closeActiveFlow();
+      continue;
+    }
+
+    timeline.push({
+      kind: 'message',
+      key: `message-${event._seq}-${event._idx}`,
       role,
-      messages: [message],
-      timestamp: message.timestamp
+      timestamp,
+      message
     });
-    lastTs = ts;
+    closeActiveFlow();
   }
 
-  return groups;
+  return timeline;
 }

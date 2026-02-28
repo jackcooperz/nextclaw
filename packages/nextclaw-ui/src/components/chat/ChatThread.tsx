@@ -1,12 +1,13 @@
 import { useMemo } from 'react';
-import type { SessionMessageView } from '@/api/types';
+import type { SessionEventView, SessionMessageView } from '@/api/types';
 import { cn } from '@/lib/utils';
 import {
-  combineToolCallAndResults,
+  buildChatTimeline,
   extractMessageText,
   extractToolCards,
-  groupChatMessages,
+  normalizeChatRole,
   type ChatRole,
+  type ChatTimelineAssistantFlowItem,
   type ToolCard
 } from '@/lib/chat-message';
 import { formatDateTime, t } from '@/lib/i18n';
@@ -16,7 +17,7 @@ import remarkGfm from 'remark-gfm';
 import { Bot, Clock3, FileSearch, Globe, Search, SendHorizontal, Terminal, User, Wrench } from 'lucide-react';
 
 type ChatThreadProps = {
-  messages: SessionMessageView[];
+  events: SessionEventView[];
   isSending: boolean;
   className?: string;
 };
@@ -142,12 +143,26 @@ function ToolCardView({ card }: { card: ToolCard }) {
   );
 }
 
-function MessageCard({ message, role }: { message: SessionMessageView; role: ChatRole }) {
-  const text = extractMessageText(message.content).trim();
+function ReasoningBlock({ reasoning, isUser }: { reasoning: string; isUser: boolean }) {
+  return (
+    <details className="mt-3">
+      <summary className={cn('cursor-pointer text-xs', isUser ? 'text-primary-100' : 'text-gray-500')}>
+        {t('chatReasoning')}
+      </summary>
+      <pre className={cn('mt-2 text-[11px] whitespace-pre-wrap break-words rounded-lg p-2', isUser ? 'bg-primary-700/60' : 'bg-gray-100')}>
+        {reasoning}
+      </pre>
+    </details>
+  );
+}
+
+function MessageCard({ message }: { message: SessionMessageView }) {
+  const role = normalizeChatRole(message);
+  const primaryText = extractMessageText(message.content).trim();
+  const primaryReasoning = typeof message.reasoning_content === 'string' ? message.reasoning_content.trim() : '';
   const toolCards = extractToolCards(message);
-  const reasoning = typeof message.reasoning_content === 'string' ? message.reasoning_content.trim() : '';
-  const shouldRenderText = Boolean(text) && !(role === 'tool' && toolCards.length > 0);
   const isUser = role === 'user';
+  const shouldRenderPrimaryText = Boolean(primaryText) && !(role === 'tool' && toolCards.length > 0);
 
   return (
     <div
@@ -160,19 +175,10 @@ function MessageCard({ message, role }: { message: SessionMessageView; role: Cha
             : 'bg-orange-50/70 text-gray-900 border-orange-200/80'
       )}
     >
-      {shouldRenderText && <MarkdownBlock text={text} role={role} />}
-      {reasoning && (
-        <details className="mt-3">
-          <summary className={cn('cursor-pointer text-xs', isUser ? 'text-primary-100' : 'text-gray-500')}>
-            {t('chatReasoning')}
-          </summary>
-          <pre className={cn('mt-2 text-[11px] whitespace-pre-wrap break-words rounded-lg p-2', isUser ? 'bg-primary-700/60' : 'bg-gray-100')}>
-            {reasoning}
-          </pre>
-        </details>
-      )}
+      {shouldRenderPrimaryText && <MarkdownBlock text={primaryText} role={role} />}
+      {primaryReasoning && <ReasoningBlock reasoning={primaryReasoning} isUser={isUser} />}
       {toolCards.length > 0 && (
-        <div className="mt-3 space-y-2">
+        <div className={cn('space-y-2', (shouldRenderPrimaryText || primaryReasoning) && 'mt-3')}>
           {toolCards.map((card, index) => (
             <ToolCardView key={`${card.kind}-${card.name}-${card.callId ?? index}`} card={card} />
           ))}
@@ -182,26 +188,46 @@ function MessageCard({ message, role }: { message: SessionMessageView; role: Cha
   );
 }
 
-export function ChatThread({ messages, isSending, className }: ChatThreadProps) {
-  const preparedMessages = useMemo(() => combineToolCallAndResults(messages), [messages]);
-  const groups = useMemo(() => groupChatMessages(preparedMessages), [preparedMessages]);
+function AssistantFlowCard({ item }: { item: ChatTimelineAssistantFlowItem }) {
+  return (
+    <div className="rounded-2xl border px-4 py-3 shadow-sm bg-white text-gray-900 border-gray-200">
+      {item.primaryText && <MarkdownBlock text={item.primaryText} role="assistant" />}
+      {item.primaryReasoning && <ReasoningBlock reasoning={item.primaryReasoning} isUser={false} />}
+      {item.toolCards.length > 0 && (
+        <div className={cn('space-y-2', (item.primaryText || item.primaryReasoning) && 'mt-3')}>
+          {item.toolCards.map((card, index) => (
+            <ToolCardView key={`${card.kind}-${card.name}-${card.callId ?? index}`} card={card} />
+          ))}
+        </div>
+      )}
+      {item.followupReasoning && <ReasoningBlock reasoning={item.followupReasoning} isUser={false} />}
+      {item.followupText && <div className="mt-3"><MarkdownBlock text={item.followupText} role="assistant" /></div>}
+    </div>
+  );
+}
+
+export function ChatThread({ events, isSending, className }: ChatThreadProps) {
+  const timeline = useMemo(() => buildChatTimeline(events), [events]);
 
   return (
     <div className={cn('space-y-5', className)}>
-      {groups.map((group) => {
-        const isUser = group.role === 'user';
+      {timeline.map((item) => {
+        const role = item.kind === 'assistant_flow' ? 'assistant' : item.role;
+        const isUser = role === 'user';
         return (
-          <div key={group.key} className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
-            {!isUser && <RoleAvatar role={group.role} />}
+          <div key={item.key} className={cn('flex gap-3', isUser ? 'justify-end' : 'justify-start')}>
+            {!isUser && <RoleAvatar role={role} />}
             <div className={cn('max-w-[88%] min-w-[280px] space-y-2', isUser && 'flex flex-col items-end')}>
-              {group.messages.map((message, index) => (
-                <MessageCard key={`${group.key}-${index}`} message={message} role={group.role} />
-              ))}
+              {item.kind === 'assistant_flow' ? (
+                <AssistantFlowCard item={item} />
+              ) : (
+                <MessageCard message={item.message} />
+              )}
               <div className={cn('text-[11px] px-1', isUser ? 'text-primary-300' : 'text-gray-400')}>
-                {roleTitle(group.role)} · {formatDateTime(group.timestamp)}
+                {roleTitle(role)} · {formatDateTime(item.timestamp)}
               </div>
             </div>
-            {isUser && <RoleAvatar role={group.role} />}
+            {isUser && <RoleAvatar role={role} />}
           </div>
         );
       })}

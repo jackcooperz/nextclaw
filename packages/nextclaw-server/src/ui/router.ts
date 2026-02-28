@@ -1424,6 +1424,10 @@ export function createUiRouter(options: UiRouterOptions): Hono {
               }
               continue;
             }
+            if (typed.type === "session_event") {
+              push("session_event", typed.event);
+              continue;
+            }
             if (typed.type === "final") {
               const response = buildChatTurnView({
                 result: typed.result,
