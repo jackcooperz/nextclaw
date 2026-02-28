@@ -13,7 +13,7 @@
 
 [English](README.md) | [简体中文](README.zh-CN.md)
 
-[Why NextClaw?](#why-nextclaw) · [Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#-architecture) · [Screenshots](#-screenshots) · [Commands](#-commands) · [Channels](#-channels) · [Docs](https://docs.nextclaw.io/en/)
+[Why NextClaw?](#why-nextclaw) · [Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#-architecture) · [Screenshots](#-screenshots) · [Commands](#-commands) · [Channels](#-channels) · [Community](#-community) · [Docs](https://docs.nextclaw.io/en/)
 
 </div>
 
@@ -77,6 +77,13 @@ NextClaw is a **pnpm monorepo**. When you run `nextclaw start`, one process runs
 | **Worker** | `workers/marketplace-api` | Cloudflare Worker: catalog API for marketplace; UI talks to it via NextClaw server proxy. |
 
 Config lives in `~/.nextclaw/config.json`; gateway and server both use it (with hot reload). Message flow: channel → gateway (core + channel-runtime) → provider (e.g. OpenRouter) → reply back to channel.
+
+---
+
+## 👥 Community
+
+- **QQ Group** (群号 1084340143): [Scan QR to join](images/contact/nextclaw-contact-qq-group.jpg)
+- **Discord**: [NextClaw/OpenClaw](https://discord.gg/j4Skbgye)
 
 ---
 

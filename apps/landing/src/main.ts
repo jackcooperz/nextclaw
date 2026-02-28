@@ -12,6 +12,7 @@ type FeatureItem = {
 type LandingCopy = {
   navFeatures: string;
   navDocs: string;
+  navCommunity: string;
   heroTitleLine1: string;
   heroTitleLine2: string;
   heroDescription: string;
@@ -32,6 +33,13 @@ type LandingCopy = {
   footerLicense: string;
   footerDocs: string;
   footerNpm: string;
+  footerDiscord: string;
+  footerQQGroup: string;
+  communityTitle: string;
+  communitySubtitle: string;
+  communityQQLabel: string;
+  communityDiscordLabel: string;
+  communityScanHint: string;
   terminalHeader: string;
   terminalStarted: string;
   copiedText: string;
@@ -55,9 +63,11 @@ const LOCALE_OPTIONS: Array<{ value: Locale; label: string }> = [
   { value: 'zh', label: '简体中文' }
 ];
 
-const LINKS: Record<'github' | 'npm', string> & { docs: Record<Locale, string> } = {
+const LINKS: Record<'github' | 'npm' | 'discord' | 'qqGroupImage', string> & { docs: Record<Locale, string> } = {
   github: 'https://github.com/Peiiii/nextclaw',
   npm: 'https://www.npmjs.com/package/nextclaw',
+  discord: 'https://discord.gg/j4Skbgye',
+  qqGroupImage: '/contact/nextclaw-contact-qq-group.jpg',
   docs: {
     en: 'https://docs.nextclaw.io/en/',
     zh: 'https://docs.nextclaw.io/zh/'
@@ -68,6 +78,7 @@ const COPY: Record<Locale, LandingCopy> = {
   en: {
     navFeatures: 'Features',
     navDocs: 'Docs',
+    navCommunity: 'Community',
     heroTitleLine1: 'NextClaw',
     heroTitleLine2: '',
     heroDescription:
@@ -122,6 +133,13 @@ const COPY: Record<Locale, LandingCopy> = {
     footerLicense: 'Released under the MIT License.',
     footerDocs: 'Docs',
     footerNpm: 'NPM',
+    footerDiscord: 'Discord',
+    footerQQGroup: 'QQ Group',
+    communityTitle: 'Join the community',
+    communitySubtitle: 'QQ Group for Chinese users, Discord for everyone.',
+    communityQQLabel: 'QQ Group (1084340143)',
+    communityDiscordLabel: 'Join Discord',
+    communityScanHint: 'Scan to join',
     terminalHeader: 'nextclaw - bash',
     terminalStarted: 'NextClaw started',
     copiedText: 'Copied'
@@ -129,6 +147,7 @@ const COPY: Record<Locale, LandingCopy> = {
   zh: {
     navFeatures: '功能',
     navDocs: '文档',
+    navCommunity: '社群',
     heroTitleLine1: 'NextClaw',
     heroTitleLine2: '',
     heroDescription: '凌驾于数字穹顶之上的专属神级管家。NextClaw 替你俯瞰并调度整个互联网与海量算力，让每一寸比特与字节都听从你的意图运转。权柄归你，完全本地运行。',
@@ -180,6 +199,13 @@ const COPY: Record<Locale, LandingCopy> = {
     footerLicense: '基于 MIT License 发布。',
     footerDocs: '文档',
     footerNpm: 'NPM',
+    footerDiscord: 'Discord',
+    footerQQGroup: 'QQ 群',
+    communityTitle: '加入社群',
+    communitySubtitle: '国内用户加 QQ 群，海外与英文用户欢迎来 Discord。',
+    communityQQLabel: 'QQ 群（1084340143）',
+    communityDiscordLabel: '加入 Discord',
+    communityScanHint: '扫码加群',
     terminalHeader: 'nextclaw - bash',
     terminalStarted: 'NextClaw 已启动',
     copiedText: '已复制'
@@ -252,6 +278,7 @@ class LandingPage {
             </div>
             <nav class="hidden md:flex gap-8 text-sm font-medium">
               <a href="#features" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.navFeatures}</a>
+              <a href="#community" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.navCommunity}</a>
               <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.navDocs}</a>
             </nav>
             <div class="flex items-center gap-2">
@@ -369,6 +396,27 @@ class LandingPage {
           </div>
         </section>
 
+        <section id="community" class="py-20 px-6 z-10 w-full max-w-4xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-3">${this.copy.communityTitle}</h2>
+            <p class="text-muted-foreground text-lg">${this.copy.communitySubtitle}</p>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-2xl mx-auto">
+            <a href="${LINKS.qqGroupImage}" target="_blank" rel="noopener noreferrer" class="glass-card rounded-2xl p-6 flex flex-col items-center gap-4 hover:-translate-y-1 transition-transform focus:ring-2 focus:ring-primary focus:outline-none">
+              <img src="${LINKS.qqGroupImage}" alt="${this.copy.communityQQLabel}" class="w-40 h-40 object-contain rounded-lg" />
+              <span class="font-medium text-foreground">${this.copy.communityQQLabel}</span>
+              <span class="text-sm text-muted-foreground">${this.copy.communityScanHint}</span>
+            </a>
+            <a href="${LINKS.discord}" target="_blank" rel="noopener noreferrer" class="glass-card rounded-2xl p-6 flex flex-col items-center justify-center gap-4 hover:-translate-y-1 transition-transform focus:ring-2 focus:ring-primary focus:outline-none">
+              <div class="w-20 h-20 rounded-2xl bg-[#5865F2] flex items-center justify-center text-white">
+                <svg class="w-12 h-12" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.075.075 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028 14.09 14.09 0 0 0 1.226-1.994.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+              </div>
+              <span class="font-medium text-foreground text-lg">${this.copy.communityDiscordLabel}</span>
+              <span class="text-sm text-muted-foreground">NextClaw / OpenClaw</span>
+            </a>
+          </div>
+        </section>
+
         <footer class="w-full border-t border-border/40 py-10 z-10 bg-background/50 backdrop-blur-sm mt-auto">
           <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="flex items-center gap-2 opacity-80">
@@ -380,6 +428,8 @@ class LandingPage {
               <a href="${docsLink}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.footerDocs}</a>
               <a href="${LINKS.github}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">GitHub</a>
               <a href="${LINKS.npm}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.footerNpm}</a>
+              <a href="${LINKS.discord}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors">${this.copy.footerDiscord}</a>
+              <a href="${LINKS.qqGroupImage}" target="_blank" rel="noopener noreferrer" class="text-muted-foreground hover:text-foreground transition-colors" title="QQ 群 1084340143">${this.copy.footerQQGroup}</a>
             </div>
           </div>
         </footer>
