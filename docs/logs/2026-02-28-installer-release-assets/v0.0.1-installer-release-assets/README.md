@@ -11,7 +11,7 @@
   - Windows 构建步骤改为 `pwsh` 执行，避免 `bash` 环境下工具链路径兼容问题。
   - Windows 构建命令参数统一显式字符串化，避免 `@` 字符在 PowerShell 下的解析歧义。
 - 调整安装器脚本 `scripts/installer/build-installer.mjs`：
-  - Windows 默认临时工作目录改为短路径（`C:\nci-<timestamp>`），降低长路径导致的依赖安装失败概率。
+  - Windows 默认临时工作目录改为用户可写短路径（`%USERPROFILE%\nci-<timestamp>`），降低长路径与权限导致的依赖安装失败概率。
   - Windows 解压 Runtime 时优先 `pwsh`，失败再回退 `powershell`，提高 runner 兼容性。
   - 权限改为 `contents: write`，允许写入 Release Assets。
   - 在矩阵任务中新增 `asset_glob`，按平台/架构匹配产物。

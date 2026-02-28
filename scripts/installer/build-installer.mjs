@@ -505,8 +505,8 @@ function parseArgs(argv) {
 
   if (!options.workdir) {
     if (options.platform === "win32") {
-      const systemDrive = process.env.SYSTEMDRIVE ?? "C:";
-      options.workdir = `${systemDrive}\\nci-${Date.now()}`;
+      const homeDir = process.env.USERPROFILE ?? process.env.RUNNER_TEMP ?? tmpdir();
+      options.workdir = `${homeDir}\\nci-${Date.now()}`;
     } else {
       options.workdir = resolve(
         tmpdir(),
