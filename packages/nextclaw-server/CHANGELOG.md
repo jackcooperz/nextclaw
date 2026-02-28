@@ -1,5 +1,11 @@
 # nextclaw-server
 
+## 0.5.22
+
+### Patch Changes
+
+- Hotfix publish to ensure provider test route is available in npm runtime.
+
 ## 0.5.21
 
 ### Patch Changes
