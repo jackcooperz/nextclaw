@@ -41,18 +41,34 @@ import type {
 const MASK_MIN_LENGTH = 8;
 const EXTRA_SENSITIVE_PATH_PATTERNS = [/authorization/i, /cookie/i, /session/i, /bearer/i];
 const PROVIDER_TEST_MODEL_FALLBACKS: Record<string, string> = {
-  openai: "gpt-4o-mini",
-  deepseek: "deepseek-chat",
-  gemini: "gemini-2.0-flash",
-  zhipu: "glm-4-flash",
-  dashscope: "qwen-plus",
-  moonshot: "moonshot-v1-8k",
-  minimax: "minimax-text-01",
+  openai: "gpt-5-mini",
+  deepseek: "deepseek-v3.2",
+  gemini: "gemini-3-flash-preview",
+  zhipu: "glm-5",
+  dashscope: "qwen3.5-flash",
+  moonshot: "kimi-k2.5",
+  minimax: "MiniMax-M2.5",
   groq: "llama-3.1-8b-instant",
-  openrouter: "openai/gpt-4o-mini",
-  aihubmix: "gpt-4o-mini",
-  anthropic: "claude-3-5-haiku-latest"
+  openrouter: "openai/gpt-5.3-codex",
+  aihubmix: "gpt-5.3-codex",
+  anthropic: "claude-opus-4-6"
 };
+
+const PREFERRED_PROVIDER_ORDER = [
+  "openai",
+  "anthropic",
+  "gemini",
+  "openrouter",
+  "dashscope",
+  "deepseek",
+  "minimax",
+  "moonshot",
+  "zhipu"
+] as const;
+
+const PREFERRED_PROVIDER_ORDER_INDEX: Map<string, number> = new Map(
+  PREFERRED_PROVIDER_ORDER.map((name, index) => [name, index])
+);
 
 type ExecuteActionResult =
   | { ok: true; data: ConfigActionExecuteResult }
@@ -295,6 +311,24 @@ function maskApiKey(value: string): { apiKeySet: boolean; apiKeyMasked?: string 
   };
 }
 
+function normalizeModelList(input: string[] | null | undefined): string[] {
+  if (!input || input.length === 0) {
+    return [];
+  }
+  const deduped = new Set<string>();
+  for (const item of input) {
+    if (typeof item !== "string") {
+      continue;
+    }
+    const trimmed = item.trim();
+    if (!trimmed) {
+      continue;
+    }
+    deduped.add(trimmed);
+  }
+  return [...deduped];
+}
+
 function toProviderView(
   config: Config,
   provider: ProviderConfig,
@@ -317,7 +351,8 @@ function toProviderView(
     apiKeySet: masked.apiKeySet || apiKeyRefSet,
     apiKeyMasked: masked.apiKeyMasked ?? (apiKeyRefSet ? "****" : undefined),
     apiBase: provider.apiBase ?? null,
-    extraHeaders: extraHeaders && Object.keys(extraHeaders).length > 0 ? extraHeaders : null
+    extraHeaders: extraHeaders && Object.keys(extraHeaders).length > 0 ? extraHeaders : null,
+    models: normalizeModelList(provider.models ?? [])
   };
   if (spec?.supportsWireApi) {
     view.wireApi = provider.wireApi ?? spec.defaultWireApi ?? "auto";
@@ -364,15 +399,30 @@ export function buildConfigMeta(config: Config): ConfigMetaView {
   const providers = PROVIDERS.map((spec) => ({
     name: spec.name,
     displayName: spec.displayName,
+    modelPrefix: spec.modelPrefix,
     keywords: spec.keywords,
     envKey: spec.envKey,
     isGateway: spec.isGateway,
     isLocal: spec.isLocal,
     defaultApiBase: spec.defaultApiBase,
+    defaultModels: normalizeModelList(spec.defaultModels ?? []),
     supportsWireApi: spec.supportsWireApi,
     wireApiOptions: spec.wireApiOptions,
     defaultWireApi: spec.defaultWireApi
-  }));
+  })).sort((left, right) => {
+    const leftRank = PREFERRED_PROVIDER_ORDER_INDEX.get(left.name);
+    const rightRank = PREFERRED_PROVIDER_ORDER_INDEX.get(right.name);
+    if (leftRank !== undefined && rightRank !== undefined) {
+      return leftRank - rightRank;
+    }
+    if (leftRank !== undefined) {
+      return -1;
+    }
+    if (rightRank !== undefined) {
+      return 1;
+    }
+    return left.name.localeCompare(right.name);
+  });
   const channels = Object.keys(config.channels).map((name) => ({
     name,
     displayName: name,
@@ -496,6 +546,9 @@ export function updateProvider(
   }
   if (Object.prototype.hasOwnProperty.call(patch, "wireApi") && spec?.supportsWireApi) {
     provider.wireApi = patch.wireApi ?? spec.defaultWireApi ?? "auto";
+  }
+  if (Object.prototype.hasOwnProperty.call(patch, "models")) {
+    provider.models = normalizeModelList(patch.models ?? []);
   }
   const next = ConfigSchema.parse(config);
   saveConfig(next, configPath);

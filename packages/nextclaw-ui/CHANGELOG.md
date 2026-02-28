@@ -1,5 +1,11 @@
 # @nextclaw/ui
 
+## 0.5.34
+
+### Patch Changes
+
+- Refresh provider default model catalogs to latest-generation options, improve provider/model selection UX, and align config model list behaviors.
+
 ## 0.5.33
 
 ### Patch Changes

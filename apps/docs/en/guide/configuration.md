@@ -101,6 +101,21 @@ Compatibility note:
 
 Supported providers include OpenRouter, OpenAI, Anthropic, MiniMax, Moonshot, Gemini, DeepSeek, DashScope, Zhipu, Groq, vLLM, and AiHubMix.
 
+## Troubleshooting Test Connection (UI now forwards details)
+
+When UI shows "Connection test failed", it now includes `status / method / endpoint / body` for faster diagnosis:
+
+- `404` + `POST /api/config/providers/<provider>/test`:
+  usually means your local `nextclaw start` runtime is outdated and does not expose this endpoint. Upgrade and retry.
+- `401` / `403`:
+  usually invalid/expired `apiKey` or incorrect `extraHeaders`.
+- `429`:
+  provider rate-limited the request. Retry later or switch model/provider.
+- `5xx`:
+  upstream provider/server error. Retry and check gateway logs.
+- `Non-JSON response`:
+  the response body is not standard JSON; UI now includes a body snippet (for example plain `404 Not Found`) for debugging.
+
 ## Runtime Config (No Restart)
 
 When the gateway is already running, config changes from the UI or `nextclaw config set` are hot-applied for:

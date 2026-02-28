@@ -101,6 +101,21 @@ NextClaw 已支持 `openclaw secrets` 风格的秘密引用，支持 `env` / `fi
 
 支持的 Provider 包括 OpenRouter、OpenAI、Anthropic、MiniMax、Moonshot、Gemini、DeepSeek、DashScope、Zhipu、Groq、vLLM、AiHubMix 等。
 
+## 测试连接失败排查（UI 提示含透传信息）
+
+当 UI 提示“连接测试失败”时，现在会直接带上 `status / method / endpoint / body` 关键信息，建议按下列方式判断：
+
+- `404` + `POST /api/config/providers/<provider>/test`：
+  多数是本地 `nextclaw start` 运行时版本过旧，缺少该接口；升级到最新版本后重试。
+- `401` / `403`：
+  通常是 `apiKey` 错误、过期，或 `extraHeaders` 配置不正确。
+- `429`：
+  提供商限流；稍后重试，或更换模型/提供商。
+- `5xx`：
+  提供商服务端异常，优先重试并查看网关日志。
+- `Non-JSON response`：
+  说明返回不是标准 JSON 错误体，UI 会附带原始片段帮助定位（例如 `404 Not Found` HTML/纯文本）。
+
 ## 运行时热更新（无需重启）
 
 网关运行时，通过 UI 或 `nextclaw config set` 的以下配置可热应用：

@@ -1,6 +1,7 @@
 export const FIELD_HELP: Record<string, string> = {
   "agents.defaults.workspace": "Workspace directory for agent context files and memory.",
-  "agents.defaults.model": "Default model identifier used by the agent. Examples: minimax/MiniMax-M2.5 · minimax/MiniMax-M2.1 · openrouter/anthropic/claude-3.5-sonnet · openrouter/openai/gpt-4o-mini.",
+  "agents.defaults.model":
+    "Default model identifier used by the agent. Use provider-prefixed format. Examples: openai/gpt-5.1 · anthropic/claude-opus-4-1 · deepseek/deepseek-chat · minimax/MiniMax-M2.5 · openrouter/openai/gpt-5.3-codex.",
   "agents.defaults.maxTokens": "Maximum tokens per response.",
   "agents.defaults.contextTokens": "Maximum model input context budget (used for token-budget pruning before provider calls).",
   "agents.defaults.maxToolIterations": "Maximum tool calls per turn.",
@@ -34,6 +35,7 @@ export const FIELD_HELP: Record<string, string> = {
   "providers.*.apiBase": "Override the provider API base URL if needed.",
   "providers.*.extraHeaders": "Extra headers to send to the provider.",
   "providers.*.wireApi": "Select API mode (auto/chat/responses) for providers that support it.",
+  "providers.*.models": "Custom model ids for this provider. These are merged with built-in defaults in the UI selector.",
   "gateway.host": "Bind address for the gateway server.",
   "gateway.port": "Port for the gateway server.",
   "ui.enabled": "Enable the built-in UI server.",

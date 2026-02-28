@@ -1,5 +1,11 @@
 # nextclaw-core
 
+## 0.6.39
+
+### Patch Changes
+
+- Refresh provider default model catalogs to latest-generation options, improve provider/model selection UX, and align config model list behaviors.
+
 ## 0.6.38
 
 ### Patch Changes

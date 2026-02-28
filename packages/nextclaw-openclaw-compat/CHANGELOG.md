@@ -1,5 +1,14 @@
 # @nextclaw/openclaw-compat
 
+## 0.1.30
+
+### Patch Changes
+
+- Refresh provider default model catalogs to latest-generation options, improve provider/model selection UX, and align config model list behaviors.
+- Updated dependencies
+  - @nextclaw/core@0.6.39
+  - @nextclaw/channel-runtime@0.1.22
+
 ## 0.1.29
 
 ### Patch Changes

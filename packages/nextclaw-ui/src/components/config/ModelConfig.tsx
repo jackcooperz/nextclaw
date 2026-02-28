@@ -3,20 +3,87 @@ import { Card } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useConfig, useConfigSchema, useUpdateModel } from '@/hooks/useConfig';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SearchableModelInput } from '@/components/common/SearchableModelInput';
+import { useConfig, useConfigMeta, useConfigSchema, useUpdateModel } from '@/hooks/useConfig';
 import { hintForPath } from '@/lib/config-hints';
 import { formatNumber, t } from '@/lib/i18n';
 import { PageLayout, PageHeader } from '@/components/layout/page-layout';
 import { DOCS_DEFAULT_BASE_URL } from '@/components/doc-browser/DocBrowserContext';
 import { BookOpen, Folder, Loader2, Sliders, Sparkles } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+function normalizeStringList(input: string[] | null | undefined): string[] {
+  if (!input || input.length === 0) {
+    return [];
+  }
+  const deduped = new Set<string>();
+  for (const item of input) {
+    const trimmed = item.trim();
+    if (trimmed) {
+      deduped.add(trimmed);
+    }
+  }
+  return [...deduped];
+}
+
+function stripProviderPrefix(model: string, prefix: string): string {
+  const trimmed = model.trim();
+  const cleanPrefix = prefix.trim();
+  if (!trimmed || !cleanPrefix) {
+    return trimmed;
+  }
+  const withSlash = `${cleanPrefix}/`;
+  if (trimmed.startsWith(withSlash)) {
+    return trimmed.slice(withSlash.length);
+  }
+  return trimmed;
+}
+
+function toProviderLocalModel(model: string, aliases: string[]): string {
+  let normalized = model.trim();
+  if (!normalized) {
+    return '';
+  }
+  for (const alias of aliases) {
+    normalized = stripProviderPrefix(normalized, alias);
+  }
+  return normalized.trim();
+}
+
+function findProviderByModel(
+  model: string,
+  providerCatalog: Array<{ name: string; aliases: string[] }>
+): string | null {
+  const trimmed = model.trim();
+  if (!trimmed) {
+    return null;
+  }
+  let bestMatch: { name: string; score: number } | null = null;
+  for (const provider of providerCatalog) {
+    for (const alias of provider.aliases) {
+      const cleanAlias = alias.trim();
+      if (!cleanAlias) {
+        continue;
+      }
+      if (trimmed === cleanAlias || trimmed.startsWith(`${cleanAlias}/`)) {
+        if (!bestMatch || cleanAlias.length > bestMatch.score) {
+          bestMatch = { name: provider.name, score: cleanAlias.length };
+        }
+      }
+    }
+  }
+  return bestMatch?.name ?? null;
+}
 
 export function ModelConfig() {
   const { data: config, isLoading } = useConfig();
+  const { data: meta } = useConfigMeta();
   const { data: schema } = useConfigSchema();
   const updateModel = useUpdateModel();
 
-  const [model, setModel] = useState('');
+  const [providerName, setProviderName] = useState('');
+  const [modelId, setModelId] = useState('');
   const [workspace, setWorkspace] = useState('');
   const [maxTokens, setMaxTokens] = useState(8192);
   const uiHints = schema?.uiHints;
@@ -24,17 +91,91 @@ export function ModelConfig() {
   const workspaceHint = hintForPath('agents.defaults.workspace', uiHints);
   const maxTokensHint = hintForPath('agents.defaults.maxTokens', uiHints);
 
+  const providerCatalog = useMemo(() => {
+    return (meta?.providers ?? []).map((provider) => {
+      const prefix = (provider.modelPrefix || provider.name || '').trim();
+      const aliases = normalizeStringList([provider.modelPrefix || '', provider.name || '']);
+      const defaultModels = normalizeStringList((provider.defaultModels ?? []).map((model) => toProviderLocalModel(model, aliases)));
+      const customModels = normalizeStringList(
+        (config?.providers?.[provider.name]?.models ?? []).map((model) => toProviderLocalModel(model, aliases))
+      );
+      const allModels = normalizeStringList([...defaultModels, ...customModels]);
+      return {
+        name: provider.name,
+        displayName: provider.displayName || provider.name,
+        prefix,
+        aliases,
+        models: allModels
+      };
+    });
+  }, [meta, config]);
+
+  const providerMap = useMemo(() => new Map(providerCatalog.map((provider) => [provider.name, provider])), [providerCatalog]);
+  const selectedProvider = providerMap.get(providerName) ?? providerCatalog[0];
+  const selectedProviderName = selectedProvider?.name ?? '';
+  const selectedProviderAliases = useMemo(() => selectedProvider?.aliases ?? [], [selectedProvider]);
+  const selectedProviderModels = useMemo(() => selectedProvider?.models ?? [], [selectedProvider]);
+
   useEffect(() => {
-    if (config?.agents?.defaults) {
-      setModel(config.agents.defaults.model || '');
-      setWorkspace(config.agents.defaults.workspace || '');
-      setMaxTokens(config.agents.defaults.maxTokens || 8192);
+    if (providerName || providerCatalog.length === 0) {
+      return;
     }
-  }, [config]);
+    setProviderName(providerCatalog[0].name);
+  }, [providerName, providerCatalog]);
+
+  useEffect(() => {
+    if (!config?.agents?.defaults) {
+      return;
+    }
+    const currentModel = (config.agents.defaults.model || '').trim();
+    const matchedProvider = findProviderByModel(currentModel, providerCatalog);
+    const effectiveProvider = matchedProvider ?? providerCatalog[0]?.name ?? '';
+    const aliases = providerMap.get(effectiveProvider)?.aliases ?? [];
+    setProviderName(effectiveProvider);
+    setModelId(toProviderLocalModel(currentModel, aliases));
+    setWorkspace(config.agents.defaults.workspace || '');
+    setMaxTokens(config.agents.defaults.maxTokens || 8192);
+  }, [config, providerCatalog, providerMap]);
+
+  const modelOptions = useMemo(() => {
+    const deduped = new Set<string>();
+    for (const modelName of selectedProviderModels) {
+      const trimmed = modelName.trim();
+      if (trimmed) {
+        deduped.add(trimmed);
+      }
+    }
+    return [...deduped];
+  }, [selectedProviderModels]);
+
+  const composedModel = useMemo(() => {
+    const normalizedModelId = toProviderLocalModel(modelId, selectedProviderAliases);
+    if (!normalizedModelId) {
+      return '';
+    }
+    if (!selectedProvider) {
+      return normalizedModelId;
+    }
+    if (!selectedProvider.prefix) {
+      return normalizedModelId;
+    }
+    return `${selectedProvider.prefix}/${normalizedModelId}`;
+  }, [modelId, selectedProvider, selectedProviderAliases]);
+
+  const modelHelpText = modelHint?.help ?? '';
+
+  const handleProviderChange = (nextProvider: string) => {
+    setProviderName(nextProvider);
+    setModelId('');
+  };
+
+  const handleModelChange = (nextModelId: string) => {
+    setModelId(toProviderLocalModel(nextModelId, selectedProviderAliases));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    updateModel.mutate({ model, maxTokens });
+    updateModel.mutate({ model: composedModel, maxTokens });
   };
 
   if (isLoading) {
@@ -88,17 +229,36 @@ export function ModelConfig() {
               <Label htmlFor="model" className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
                 {modelHint?.label ?? 'Model Name'}
               </Label>
-              <Input
-                id="model"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                placeholder={modelHint?.placeholder ?? 'minimax/MiniMax-M2.1'}
-                className="h-12 px-4 rounded-xl"
-              />
-              <p className="text-xs text-gray-400">
-                {modelHint?.help ??
-                  'Examples: gpt-5.1 · claude-opus-4-1 · deepseek/deepseek-chat · dashscope/qwen-max-latest · openrouter/openai/gpt-5.3-codex'}
-              </p>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div className="sm:w-[38%] sm:min-w-[170px]">
+                  <Select value={selectedProviderName} onValueChange={handleProviderChange}>
+                    <SelectTrigger className="h-10 w-full rounded-xl">
+                      <SelectValue placeholder={t('providersSelectPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {providerCatalog.map((provider) => (
+                        <SelectItem key={provider.name} value={provider.name}>
+                          {provider.displayName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <span className="hidden h-10 items-center justify-center leading-none text-lg font-semibold text-gray-300 sm:inline-flex">/</span>
+                <SearchableModelInput
+                  key={selectedProviderName}
+                  id="model"
+                  value={modelId}
+                  onChange={handleModelChange}
+                  options={modelOptions}
+                  placeholder={modelHint?.placeholder ?? 'gpt-5.1'}
+                  className="sm:flex-1"
+                  inputClassName="h-10 rounded-xl"
+                  emptyText={t('modelPickerNoOptions')}
+                  createText={t('modelPickerUseCustom')}
+                />
+              </div>
+              <p className="text-xs text-gray-400">{modelHelpText}</p>
               <a
                 href={`${DOCS_DEFAULT_BASE_URL}/guide/model-selection`}
                 className="inline-flex items-center gap-1.5 text-xs text-primary hover:text-primary-hover transition-colors"
@@ -127,7 +287,7 @@ export function ModelConfig() {
                 value={workspace}
                 onChange={(e) => setWorkspace(e.target.value)}
                 placeholder={workspaceHint?.placeholder ?? '/path/to/workspace'}
-                className="h-12 px-4 rounded-xl"
+                className="rounded-xl"
               />
             </div>
           </div>

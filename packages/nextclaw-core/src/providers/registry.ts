@@ -5,6 +5,8 @@ export type ProviderSpec = {
   keywords: string[];
   envKey: string;
   displayName?: string;
+  modelPrefix?: string;
+  defaultModels?: string[];
   litellmPrefix?: string;
   skipPrefixes?: string[];
   envExtras?: Array<[string, string]>;
@@ -26,6 +28,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["openrouter"],
     envKey: "OPENROUTER_API_KEY",
     displayName: "OpenRouter",
+    modelPrefix: "openrouter",
     litellmPrefix: "openrouter",
     skipPrefixes: [],
     envExtras: [],
@@ -34,6 +37,15 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "sk-or-",
     detectByBaseKeyword: "openrouter",
     defaultApiBase: "https://openrouter.ai/api/v1",
+    defaultModels: [
+      "openrouter/minimax/minimax-m2.5",
+      "openrouter/google/gemini-3-flash-preview",
+      "openrouter/deepseek/deepseek-v3.2",
+      "openrouter/x-ai/grok-4.1-fast",
+      "openrouter/z-ai/glm-5",
+      "openrouter/anthropic/claude-opus-4.6",
+      "openrouter/openai/gpt-5.3-codex"
+    ],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -42,6 +54,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["aihubmix"],
     envKey: "OPENAI_API_KEY",
     displayName: "AiHubMix",
+    modelPrefix: "aihubmix",
     litellmPrefix: "openai",
     skipPrefixes: [],
     envExtras: [],
@@ -50,6 +63,7 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "aihubmix",
     defaultApiBase: "https://aihubmix.com/v1",
+    defaultModels: ["aihubmix/gpt-5.3-codex", "aihubmix/claude-opus-4.6", "aihubmix/gemini-3.1-pro-preview"],
     stripModelPrefix: true,
     modelOverrides: []
   },
@@ -58,14 +72,19 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["anthropic", "claude"],
     envKey: "ANTHROPIC_API_KEY",
     displayName: "Anthropic",
-    litellmPrefix: "",
-    skipPrefixes: [],
+    modelPrefix: "anthropic",
+    litellmPrefix: "anthropic",
+    skipPrefixes: ["anthropic/"],
     envExtras: [],
     isGateway: false,
     isLocal: false,
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://api.anthropic.com",
+    defaultModels: [
+      "anthropic/claude-opus-4-6",
+      "anthropic/claude-sonnet-4-6"
+    ],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -74,14 +93,16 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["openai", "gpt"],
     envKey: "OPENAI_API_KEY",
     displayName: "OpenAI",
-    litellmPrefix: "",
-    skipPrefixes: [],
+    modelPrefix: "openai",
+    litellmPrefix: "openai",
+    skipPrefixes: ["openai/"],
     envExtras: [],
     isGateway: false,
     isLocal: false,
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://api.openai.com/v1",
+    defaultModels: ["openai/gpt-5.3-codex", "openai/gpt-5-mini", "openai/gpt-5-nano"],
     stripModelPrefix: false,
     modelOverrides: [],
     supportsWireApi: true,
@@ -93,6 +114,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["deepseek"],
     envKey: "DEEPSEEK_API_KEY",
     displayName: "DeepSeek",
+    modelPrefix: "deepseek",
     litellmPrefix: "deepseek",
     skipPrefixes: ["deepseek/"],
     envExtras: [],
@@ -101,6 +123,7 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://api.deepseek.com",
+    defaultModels: ["deepseek/deepseek-v3.2", "deepseek/deepseek-r1"],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -109,6 +132,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["gemini"],
     envKey: "GEMINI_API_KEY",
     displayName: "Gemini",
+    modelPrefix: "gemini",
     litellmPrefix: "gemini",
     skipPrefixes: ["gemini/"],
     envExtras: [],
@@ -117,6 +141,10 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://generativelanguage.googleapis.com/v1beta/openai",
+    defaultModels: [
+      "gemini/gemini-3.1-pro-preview",
+      "gemini/gemini-3-flash-preview"
+    ],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -125,6 +153,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["zhipu", "glm", "zai"],
     envKey: "ZAI_API_KEY",
     displayName: "Zhipu AI",
+    modelPrefix: "zai",
     litellmPrefix: "zai",
     skipPrefixes: ["zhipu/", "zai/", "openrouter/", "hosted_vllm/"],
     envExtras: [["ZHIPUAI_API_KEY", "{api_key}"]],
@@ -133,6 +162,7 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://open.bigmodel.cn/api/paas/v4",
+    defaultModels: ["zai/glm-5"],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -141,6 +171,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["qwen", "dashscope"],
     envKey: "DASHSCOPE_API_KEY",
     displayName: "DashScope",
+    modelPrefix: "dashscope",
     litellmPrefix: "dashscope",
     skipPrefixes: ["dashscope/", "openrouter/"],
     envExtras: [],
@@ -149,6 +180,14 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    defaultModels: [
+      "dashscope/qwen3.5-plus",
+      "dashscope/qwen3.5-flash",
+      "dashscope/qwen3.5-397b-a17b",
+      "dashscope/qwen3.5-122b-a10b",
+      "dashscope/qwen3.5-35b-a3b",
+      "dashscope/qwen3.5-27b"
+    ],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -157,6 +196,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["moonshot", "kimi"],
     envKey: "MOONSHOT_API_KEY",
     displayName: "Moonshot",
+    modelPrefix: "moonshot",
     litellmPrefix: "moonshot",
     skipPrefixes: ["moonshot/", "openrouter/"],
     envExtras: [["MOONSHOT_API_BASE", "{api_base}"]],
@@ -165,6 +205,7 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://api.moonshot.ai/v1",
+    defaultModels: ["moonshot/kimi-k2.5"],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -173,6 +214,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["minimax"],
     envKey: "MINIMAX_API_KEY",
     displayName: "MiniMax",
+    modelPrefix: "minimax",
     litellmPrefix: "minimax",
     skipPrefixes: ["minimax/", "openrouter/"],
     envExtras: [],
@@ -181,6 +223,7 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://api.minimax.io/v1",
+    defaultModels: ["minimax/MiniMax-M2.5"],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -189,6 +232,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["vllm"],
     envKey: "HOSTED_VLLM_API_KEY",
     displayName: "vLLM/Local",
+    modelPrefix: "hosted_vllm",
     litellmPrefix: "hosted_vllm",
     skipPrefixes: [],
     envExtras: [],
@@ -197,6 +241,10 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "http://127.0.0.1:8000/v1",
+    defaultModels: [
+      "hosted_vllm/meta-llama/Llama-3.1-8B-Instruct",
+      "hosted_vllm/Qwen/Qwen2.5-7B-Instruct"
+    ],
     stripModelPrefix: false,
     modelOverrides: []
   },
@@ -205,6 +253,7 @@ export const PROVIDERS: ProviderSpec[] = [
     keywords: ["groq"],
     envKey: "GROQ_API_KEY",
     displayName: "Groq",
+    modelPrefix: "groq",
     litellmPrefix: "groq",
     skipPrefixes: ["groq/"],
     envExtras: [],
@@ -213,6 +262,7 @@ export const PROVIDERS: ProviderSpec[] = [
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
     defaultApiBase: "https://api.groq.com/openai/v1",
+    defaultModels: ["groq/openai/gpt-oss-120b", "groq/llama-3.1-8b-instant"],
     stripModelPrefix: false,
     modelOverrides: []
   }

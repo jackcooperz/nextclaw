@@ -271,7 +271,8 @@ export const ProviderConfigSchema = z.object({
   apiKey: z.string().default(""),
   apiBase: z.string().nullable().default(null),
   extraHeaders: z.record(z.string()).nullable().default(null),
-  wireApi: z.enum(["auto", "chat", "responses"]).default("auto")
+  wireApi: z.enum(["auto", "chat", "responses"]).default("auto"),
+  models: z.array(z.string().trim().min(1)).default([])
 });
 
 export const ProvidersConfigSchema = z.object({

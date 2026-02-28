@@ -20,10 +20,10 @@ openrouter/minimax/minimax-m2.5
 openrouter/moonshotai/kimi-k2.5
 
 # 直连 provider 路由（稳定/常用）
-gpt-5.1
-gpt-5-pro
-claude-opus-4-1
-claude-sonnet-4
+openai/gpt-5.1
+openai/gpt-5-pro
+anthropic/claude-opus-4-1
+anthropic/claude-sonnet-4
 gemini/gemini-2.5-pro
 deepseek/deepseek-chat
 deepseek/deepseek-reasoner

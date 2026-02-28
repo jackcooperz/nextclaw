@@ -15,6 +15,7 @@ export type ProviderConfigView = {
   apiBase?: string | null;
   extraHeaders?: Record<string, string> | null;
   wireApi?: "auto" | "chat" | "responses" | null;
+  models?: string[];
 };
 
 export type ProviderConfigUpdate = {
@@ -22,11 +23,25 @@ export type ProviderConfigUpdate = {
   apiBase?: string | null;
   extraHeaders?: Record<string, string> | null;
   wireApi?: "auto" | "chat" | "responses" | null;
+  models?: string[] | null;
 };
 
 export type ProviderConnectionTestRequest = ProviderConfigUpdate & {
   model?: string | null;
 };
+
+export type ProviderConnectionTestErrorCode =
+  | 'API_KEY_REQUIRED'
+  | 'MODEL_REQUIRED'
+  | 'AUTH_FAILED'
+  | 'PERMISSION_DENIED'
+  | 'RATE_LIMITED'
+  | 'MODEL_NOT_FOUND'
+  | 'INVALID_ENDPOINT'
+  | 'INVALID_REQUEST'
+  | 'NETWORK_ERROR'
+  | 'SERVER_ERROR'
+  | 'UNKNOWN_ERROR';
 
 export type ProviderConnectionTestResult = {
   success: boolean;
@@ -34,6 +49,10 @@ export type ProviderConnectionTestResult = {
   model?: string;
   latencyMs: number;
   message: string;
+  errorCode?: ProviderConnectionTestErrorCode;
+  httpStatus?: number;
+  endpoint?: string;
+  hint?: string;
 };
 
 export type AgentProfileView = {
@@ -306,11 +325,13 @@ export type ConfigView = {
 export type ProviderSpecView = {
   name: string;
   displayName?: string;
+  modelPrefix?: string;
   keywords: string[];
   envKey: string;
   isGateway?: boolean;
   isLocal?: boolean;
   defaultApiBase?: string;
+  defaultModels?: string[];
   supportsWireApi?: boolean;
   wireApiOptions?: Array<"auto" | "chat" | "responses">;
   defaultWireApi?: "auto" | "chat" | "responses";

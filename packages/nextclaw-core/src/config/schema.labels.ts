@@ -39,6 +39,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "providers.*.apiBase": "API Base URL",
   "providers.*.extraHeaders": "Extra Headers",
   "providers.*.wireApi": "Wire API Mode",
+  "providers.*.models": "Custom Models",
   channels: "Channels",
   gateway: "Gateway",
   "gateway.host": "Gateway Host",

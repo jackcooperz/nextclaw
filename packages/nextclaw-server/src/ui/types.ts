@@ -16,6 +16,7 @@ export type ProviderConfigView = {
   apiBase?: string | null;
   extraHeaders?: Record<string, string> | null;
   wireApi?: "auto" | "chat" | "responses" | null;
+  models?: string[];
 };
 
 export type ProviderConfigUpdate = {
@@ -23,6 +24,7 @@ export type ProviderConfigUpdate = {
   apiBase?: string | null;
   extraHeaders?: Record<string, string> | null;
   wireApi?: "auto" | "chat" | "responses" | null;
+  models?: string[] | null;
 };
 
 export type ProviderConnectionTestRequest = ProviderConfigUpdate & {
@@ -316,11 +318,13 @@ export type ConfigView = {
 export type ProviderSpecView = {
   name: string;
   displayName?: string;
+  modelPrefix?: string;
   keywords: string[];
   envKey: string;
   isGateway?: boolean;
   isLocal?: boolean;
   defaultApiBase?: string;
+  defaultModels?: string[];
   supportsWireApi?: boolean;
   wireApiOptions?: Array<"auto" | "chat" | "responses">;
   defaultWireApi?: "auto" | "chat" | "responses";

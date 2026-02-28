@@ -166,6 +166,8 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   workspace: { zh: '工作空间', en: 'Workspace' },
   generationParameters: { zh: '生成参数', en: 'Generation Parameters' },
   modelName: { zh: '模型', en: 'Model' },
+  modelPickerNoOptions: { zh: '暂无可选模型', en: 'No model options available' },
+  modelPickerUseCustom: { zh: '使用自定义模型：{value}', en: 'Use custom model: {value}' },
   maxTokens: { zh: '最大 Token 数', en: 'Max Tokens' },
   maxToolIterations: { zh: '最大工具迭代次数', en: 'Max Tool Iterations' },
   saveChanges: { zh: '保存变更', en: 'Save Changes' },
@@ -203,6 +205,16 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   providerTestingConnection: { zh: '测试中...', en: 'Testing...' },
   providerTestConnectionSuccess: { zh: '连接测试通过', en: 'Connection test passed' },
   providerTestConnectionFailed: { zh: '连接测试失败', en: 'Connection test failed' },
+  providerModelsTitle: { zh: '可用模型列表', en: 'Available Models' },
+  providerModelInputPlaceholder: { zh: '输入模型 ID（无需 provider 前缀）', en: 'Enter model id (without provider prefix)' },
+  providerAddModel: { zh: '添加模型', en: 'Add Model' },
+  providerModelsEmpty: { zh: '当前没有模型，可直接输入并添加。', en: 'No models yet. Add one by typing model id.' },
+  providerModelDefaultTag: { zh: '默认', en: 'Default' },
+  providerModelCustomTag: { zh: '自定义', en: 'Custom' },
+  providerModelsHelp: {
+    zh: '系统会先填充预置模型；你可以在这里新增或删除。请填写当前提供商自己的模型 ID（不带当前 provider 前缀）；若输入带当前 provider 前缀会自动去除，但会保留后续路径（如 openai/gpt-5）。',
+    en: 'Built-in models are prefilled and can be added or removed here. Enter provider-local model ids without the current provider prefix; if prefixed input is entered, only the current provider prefix is removed while the remaining path is preserved (for example, openai/gpt-5).'
+  },
   resetToDefault: { zh: '恢复默认', en: 'Reset to Default' },
   leaveBlankToKeepUnchanged: { zh: '留空则保持不变', en: 'Leave blank to keep unchanged' },
 

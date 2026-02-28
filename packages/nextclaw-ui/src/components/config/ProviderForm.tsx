@@ -10,7 +10,7 @@ import { StatusDot } from '@/components/ui/status-dot';
 import { t } from '@/lib/i18n';
 import { hintForPath } from '@/lib/config-hints';
 import type { ProviderConfigUpdate, ProviderConnectionTestRequest } from '@/api/types';
-import { KeyRound, Globe, Hash, RotateCcw, CircleDotDashed } from 'lucide-react';
+import { KeyRound, Globe, Hash, RotateCcw, CircleDotDashed, Sparkles, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
 
 type WireApiType = 'auto' | 'chat' | 'responses';
@@ -52,6 +52,82 @@ function headersEqual(
   return aEntries.every(([key, value], index) => key === bEntries[index][0] && value === bEntries[index][1]);
 }
 
+function normalizeModelList(input: string[] | null | undefined): string[] {
+  if (!input || input.length === 0) {
+    return [];
+  }
+  const deduped = new Set<string>();
+  for (const item of input) {
+    const trimmed = item.trim();
+    if (trimmed) {
+      deduped.add(trimmed);
+    }
+  }
+  return [...deduped];
+}
+
+function stripProviderPrefix(model: string, prefix: string): string {
+  const trimmed = model.trim();
+  if (!trimmed || !prefix.trim()) {
+    return trimmed;
+  }
+  const fullPrefix = `${prefix.trim()}/`;
+  if (trimmed.startsWith(fullPrefix)) {
+    return trimmed.slice(fullPrefix.length);
+  }
+  return trimmed;
+}
+
+function toProviderLocalModelId(model: string, aliases: string[]): string {
+  let normalized = model.trim();
+  if (!normalized) {
+    return '';
+  }
+  for (const alias of aliases) {
+    const cleanAlias = alias.trim();
+    if (!cleanAlias) {
+      continue;
+    }
+    normalized = stripProviderPrefix(normalized, cleanAlias);
+  }
+  return normalized.trim();
+}
+
+function modelListsEqual(left: string[], right: string[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((item, index) => item === right[index]);
+}
+
+function mergeModelLists(base: string[], extra: string[]): string[] {
+  const merged = [...base];
+  for (const item of extra) {
+    if (!merged.includes(item)) {
+      merged.push(item);
+    }
+  }
+  return merged;
+}
+
+function resolveEditableModels(defaultModels: string[], savedModels: string[]): string[] {
+  if (savedModels.length === 0) {
+    return defaultModels;
+  }
+  const looksLikeLegacyCustomList = savedModels.every((model) => !defaultModels.includes(model));
+  if (looksLikeLegacyCustomList) {
+    return mergeModelLists(defaultModels, savedModels);
+  }
+  return savedModels;
+}
+
+function serializeModelsForSave(models: string[], defaultModels: string[]): string[] {
+  if (modelListsEqual(models, defaultModels)) {
+    return [];
+  }
+  return models;
+}
+
 export function ProviderForm({ providerName }: ProviderFormProps) {
   const { data: config } = useConfig();
   const { data: meta } = useConfigMeta();
@@ -63,6 +139,8 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
   const [apiBase, setApiBase] = useState('');
   const [extraHeaders, setExtraHeaders] = useState<Record<string, string> | null>(null);
   const [wireApi, setWireApi] = useState<WireApiType>('auto');
+  const [models, setModels] = useState<string[]>([]);
+  const [modelDraft, setModelDraft] = useState('');
 
   const providerSpec = meta?.providers.find((p) => p.name === providerName);
   const providerConfig = providerName ? config?.providers[providerName] : null;
@@ -74,10 +152,33 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
   const wireApiHint = providerName ? hintForPath(`providers.${providerName}.wireApi`, uiHints) : undefined;
 
   const providerTitle = providerSpec?.displayName || providerName || t('providersSelectPlaceholder');
+  const providerModelPrefix = providerSpec?.modelPrefix || providerName || '';
+  const providerModelAliases = useMemo(
+    () => normalizeModelList([providerModelPrefix, providerName || '']),
+    [providerModelPrefix, providerName]
+  );
   const defaultApiBase = providerSpec?.defaultApiBase || '';
   const currentApiBase = providerConfig?.apiBase || defaultApiBase;
   const currentHeaders = normalizeHeaders(providerConfig?.extraHeaders || null);
   const currentWireApi = (providerConfig?.wireApi || providerSpec?.defaultWireApi || 'auto') as WireApiType;
+  const defaultModels = useMemo(
+    () =>
+      normalizeModelList(
+        (providerSpec?.defaultModels ?? []).map((model) => toProviderLocalModelId(model, providerModelAliases))
+      ),
+    [providerSpec?.defaultModels, providerModelAliases]
+  );
+  const currentModels = useMemo(
+    () =>
+      normalizeModelList(
+        (providerConfig?.models ?? []).map((model) => toProviderLocalModelId(model, providerModelAliases))
+      ),
+    [providerConfig?.models, providerModelAliases]
+  );
+  const currentEditableModels = useMemo(
+    () => resolveEditableModels(defaultModels, currentModels),
+    [defaultModels, currentModels]
+  );
 
   useEffect(() => {
     if (!providerName) {
@@ -85,6 +186,8 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
       setApiBase('');
       setExtraHeaders(null);
       setWireApi('auto');
+      setModels([]);
+      setModelDraft('');
       return;
     }
 
@@ -92,7 +195,9 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     setApiBase(currentApiBase);
     setExtraHeaders(providerConfig?.extraHeaders || null);
     setWireApi(currentWireApi);
-  }, [providerName, currentApiBase, providerConfig?.extraHeaders, currentWireApi]);
+    setModels(currentEditableModels);
+    setModelDraft('');
+  }, [providerName, currentApiBase, providerConfig?.extraHeaders, currentWireApi, currentEditableModels]);
 
   const hasChanges = useMemo(() => {
     if (!providerName) {
@@ -102,8 +207,9 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     const apiBaseChanged = apiBase.trim() !== currentApiBase.trim();
     const headersChanged = !headersEqual(extraHeaders, currentHeaders);
     const wireApiChanged = providerSpec?.supportsWireApi ? wireApi !== currentWireApi : false;
+    const modelsChanged = !modelListsEqual(models, currentEditableModels);
 
-    return apiKeyChanged || apiBaseChanged || headersChanged || wireApiChanged;
+    return apiKeyChanged || apiBaseChanged || headersChanged || wireApiChanged || modelsChanged;
   }, [
     providerName,
     apiKey,
@@ -113,7 +219,9 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     currentHeaders,
     providerSpec?.supportsWireApi,
     wireApi,
-    currentWireApi
+    currentWireApi,
+    models,
+    currentEditableModels
   ]);
 
   const resetToDefault = () => {
@@ -121,6 +229,21 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     setApiBase(defaultApiBase);
     setExtraHeaders(null);
     setWireApi((providerSpec?.defaultWireApi || 'auto') as WireApiType);
+    setModels(defaultModels);
+    setModelDraft('');
+  };
+
+  const handleAddModel = () => {
+    const next = toProviderLocalModelId(modelDraft, providerModelAliases);
+    if (!next) {
+      return;
+    }
+    if (models.includes(next)) {
+      setModelDraft('');
+      return;
+    }
+    setModels((prev) => [...prev, next]);
+    setModelDraft('');
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -149,6 +272,9 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
 
     if (providerSpec?.supportsWireApi && wireApi !== currentWireApi) {
       payload.wireApi = wireApi;
+    }
+    if (!modelListsEqual(models, currentEditableModels)) {
+      payload.models = serializeModelsForSave(models, defaultModels);
     }
 
     updateProvider.mutate({ provider: providerName, data: payload });
@@ -180,7 +306,11 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
         toast.success(`${t('providerTestConnectionSuccess')} (${result.latencyMs}ms)`);
         return;
       }
-      toast.error(`${t('providerTestConnectionFailed')}: ${result.message}`);
+      const details = [`provider=${result.provider}`, `latency=${result.latencyMs}ms`];
+      if (result.model) {
+        details.push(`model=${result.model}`);
+      }
+      toast.error(`${t('providerTestConnectionFailed')}: ${result.message} | ${details.join(' | ')}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       toast.error(`${t('providerTestConnectionFailed')}: ${message}`);
@@ -275,6 +405,58 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
             </Label>
             <KeyValueEditor value={extraHeaders} onChange={setExtraHeaders} />
             <p className="text-xs text-gray-500">{extraHeadersHint?.help || t('providerExtraHeadersHelp')}</p>
+          </div>
+
+          <div className="space-y-2.5">
+            <Label className="flex items-center gap-2 text-sm font-medium text-gray-900">
+              <Sparkles className="h-3.5 w-3.5 text-gray-500" />
+              {t('providerModelsTitle')}
+            </Label>
+
+            <div className="flex items-center gap-2">
+              <Input
+                value={modelDraft}
+                onChange={(event) => setModelDraft(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') {
+                    event.preventDefault();
+                    handleAddModel();
+                  }
+                }}
+                placeholder={t('providerModelInputPlaceholder')}
+                className="flex-1"
+              />
+              <Button type="button" variant="outline" onClick={handleAddModel} disabled={modelDraft.trim().length === 0}>
+                <Plus className="mr-1.5 h-4 w-4" />
+                {t('providerAddModel')}
+              </Button>
+            </div>
+
+            {models.length === 0 ? (
+              <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-500">
+                {t('providerModelsEmpty')}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {models.map((modelName) => (
+                  <div
+                    key={modelName}
+                    className="group inline-flex max-w-full items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5"
+                  >
+                    <span className="max-w-[180px] truncate text-sm text-gray-800 sm:max-w-[240px]">{modelName}</span>
+                    <button
+                      type="button"
+                      onClick={() => setModels((prev) => prev.filter((name) => name !== modelName))}
+                      className="inline-flex h-5 w-5 items-center justify-center rounded-full text-gray-400 transition-opacity hover:bg-gray-100 hover:text-gray-600 opacity-100 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100"
+                      aria-label={t('remove')}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <p className="text-xs text-gray-500">{t('providerModelsHelp')}</p>
           </div>
         </div>
 

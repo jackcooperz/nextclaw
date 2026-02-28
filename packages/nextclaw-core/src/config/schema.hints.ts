@@ -43,6 +43,7 @@ const FIELD_PLACEHOLDERS: Record<string, string> = {
   "ui.host": "0.0.0.0",
   "ui.port": "18791",
   "providers.*.apiBase": "https://api.example.com",
+  "providers.*.models": "gpt-5.1",
   "providers.minimax.apiBase": "CN: https://api.minimaxi.com/v1; Global: https://api.minimax.io/v1"
 };
 
