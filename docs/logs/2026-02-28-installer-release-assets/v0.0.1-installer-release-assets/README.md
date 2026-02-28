@@ -3,6 +3,7 @@
 ## 迭代完成说明（改了什么）
 
 - 调整安装器工作流 `.github/workflows/installer-build.yml`：
+  - 触发条件增加 `push tags (v*)`，推送版本 tag 时可自动创建/更新 Release 并上传安装器。
   - 触发条件改为 `release.published`（发布 Release 后自动运行）。
   - `workflow_dispatch` 新增 `release_tag` 输入，支持对已存在 Release 手动补传安装器。
   - 权限改为 `contents: write`，允许写入 Release Assets。
