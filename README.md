@@ -2,7 +2,7 @@
 
 # NextClaw
 
-**Your omnipotent personal assistant**
+**Your omnipotent personal assistant, residing above the digital realm**
 
 [![npm](https://img.shields.io/npm/v/nextclaw)](https://www.npmjs.com/package/nextclaw)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](https://nodejs.org)
@@ -19,7 +19,19 @@
 
 ---
 
-Inspired by [OpenClaw](https://github.com/openclaw/openclaw) & [nanobot](https://github.com/HKUDS/nanobot), **NextClaw** is your omnipotent personal assistant: it orchestrates internet resources and raw compute from your own machine while staying OpenClaw-compatible. Install once, run `nextclaw start`, then configure providers and channels in the browser. No onboarding wizard, no daemon setup — just one command and you're in.
+**NextClaw** is your omnipotent personal assistant, residing above the digital realm. It orchestrates the entire internet and raw compute, bending every bit and byte to manifest your intent into reality. Runs entirely on your machine.
+
+Inspired by [OpenClaw](https://github.com/openclaw/openclaw) & [nanobot](https://github.com/HKUDS/nanobot), it stays OpenClaw-compatible. Install once, run `nextclaw start`, then configure providers and channels in the browser. No onboarding wizard, no daemon setup — just one command and you're in.
+
+Most OpenClaw alternatives are better suited for learning or secondary development; in experience and ecosystem they can't match OpenClaw. NextClaw aims for **better usability** and **OpenClaw ecosystem compatibility** ([nextclaw.io](https://nextclaw.io)). Reasons to try it:
+
+- **One command, UI-first config**: Minimal install, no complex CLI, beginner-friendly
+- **Friendly to more regions**: Built-in QQ, Feishu, and other channels
+- **OpenClaw ecosystem compatible**: Same plugin and config patterns, reuse existing ecosystem
+- **Polished UI and i18n**: Ready-to-use interface with Chinese and other languages
+- **Deploy anywhere**: Common OSes, cloud VMs, and Docker
+- **Open source, lightweight**: Codebase ~1/20 the size of OpenClaw, easier to maintain and extend
+- **More modular architecture**: Better maintainability and iteration speed
 
 **Best for:** quick trials, secondary machines, or anyone who wants multi-channel + multi-provider with low maintenance overhead.
 

@@ -2,7 +2,7 @@
 
 # NextClaw
 
-**你的专属神级管家**
+**凌驾于数字穹顶之上的专属神级管家**
 
 [![npm](https://img.shields.io/npm/v/nextclaw)](https://www.npmjs.com/package/nextclaw)
 [![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](https://nodejs.org)
@@ -19,7 +19,19 @@
 
 ---
 
-受 [OpenClaw](https://github.com/openclaw/openclaw) 与 [nanobot](https://github.com/HKUDS/nanobot) 启发，**NextClaw** 是你的专属神级管家：在你自己的机器上调度互联网资源与海量算力，同时保持 OpenClaw 兼容。安装后执行 `nextclaw start`，即可在浏览器中配置 Provider 与渠道，无需向导或守护进程，一条命令即可使用。
+**NextClaw** 凌驾于数字穹顶之上，是你的专属神级管家。它替你俯瞰并调度整个互联网与海量算力，让每一寸比特与字节都听从你的意图运转。权柄归你，完全本地运行。
+
+受 [OpenClaw](https://github.com/openclaw/openclaw) 与 [nanobot](https://github.com/HKUDS/nanobot) 启发，保持 OpenClaw 兼容。安装后执行 `nextclaw start`，即可在浏览器中配置 Provider 与渠道，无需向导或守护进程，一条命令即可使用。
+
+大部分 OpenClaw 替代品更适合学习或二次开发，在体验和生态上难以与 OpenClaw 相比。NextClaw 以**更好的易用性**和**兼容 OpenClaw 生态**为目标（[nextclaw.io](https://nextclaw.io)）。值得一试的理由包括：
+
+- **一行命令、界面化配置**：极简安装，免去复杂命令行，对小白友好
+- **国内用户友好**：自带 QQ、飞书等渠道支持
+- **兼容 OpenClaw 生态**：插件与配置方式一致，可复用现有生态
+- **好看易用的界面与中文支持**：开箱即用的 UI 与多语言
+- **全平台部署**：支持常见操作系统、云服务器与 Docker
+- **开源轻量**：代码量约为 OpenClaw 的 1/20，更易维护与二次开发
+- **更彻底的插件化架构**：可维护性更强，迭代效率更高
 
 **适合：** 快速试用、备用机，或希望多渠道 + 多 Provider 且维护成本低的用户。
 
