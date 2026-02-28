@@ -522,7 +522,6 @@ export function ChatPage() {
 
               <Button
                 variant="outline"
-                size="sm"
                 className="rounded-lg"
                 onClick={handleDeleteSession}
                 disabled={!selectedSession || deleteSession.isPending}
