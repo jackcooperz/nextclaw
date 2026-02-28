@@ -295,9 +295,18 @@ class InstallerBuilder {
   }
 
   readLatestNpmDebugLog() {
-    const cacheRoot = process.platform === "win32"
-      ? process.env.LocalAppData ? resolve(process.env.LocalAppData, "npm-cache", "_logs") : ""
-      : process.env.HOME ? resolve(process.env.HOME, ".npm", "_logs") : "";
+    const explicitCache =
+      process.env.npm_config_cache?.trim() || process.env.NPM_CONFIG_CACHE?.trim() || "";
+    const defaultCacheRoot = process.platform === "win32"
+      ? process.env.LOCALAPPDATA?.trim() || process.env.LocalAppData?.trim()
+      : process.env.HOME?.trim();
+    const cacheRoot = explicitCache
+      ? resolve(explicitCache, "_logs")
+      : defaultCacheRoot
+        ? process.platform === "win32"
+          ? resolve(defaultCacheRoot, "npm-cache", "_logs")
+          : resolve(defaultCacheRoot, ".npm", "_logs")
+        : "";
     if (!cacheRoot || !existsSync(cacheRoot)) {
       return "";
     }
