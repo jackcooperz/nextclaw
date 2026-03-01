@@ -17,6 +17,14 @@
   - `scripts/installer/docker/smoke-node-bootstrap.sh`
   - `scripts/installer/docker/run-docker-smoke.sh`
   - `scripts/installer/docker/README.md`
+- 新增功能级 Docker 冒烟与一键入口：
+  - `scripts/installer/docker/run-docker-nextclaw-smoke.sh`（`init/start/stop` + npm/npx 依赖链路）
+  - `scripts/installer/docker/run-docker-e2e.sh`
+  - 根命令：`pnpm installer:verify:e2e`
+- 新增本机一键 UI 验收入口（动态避让端口，避免本地开发冲突）：
+  - `scripts/installer/run-installed-ui-smoke.sh`
+  - `scripts/installer/stop-installed-ui-smoke.sh`
+  - 根命令：`pnpm installer:verify:ui` / `pnpm installer:verify:ui:stop`
 
 ## 设计结论
 

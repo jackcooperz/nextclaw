@@ -58,3 +58,22 @@
   - `✓ nextclaw started in background`
   - `UI: http://127.0.0.1:19091`
   - `Stop: nextclaw stop`
+  - `plugins install` / `clawhub install` 验证中未出现 `npm/npx not found`
+
+## 一键验证入口
+
+- `pnpm installer:verify:e2e`
+- 内部依次执行：
+  - `scripts/installer/docker/run-docker-smoke.sh`
+  - `scripts/installer/docker/run-docker-nextclaw-smoke.sh`
+- 实跑结果：通过，末尾输出 `all installer docker checks passed`
+
+## 本机一键 UI 验收入口（手工点开验证）
+
+- 启动命令：`pnpm installer:verify:ui`
+- 停止命令：`pnpm installer:verify:ui:stop`
+- 行为：
+  - 自动选择未占用端口（范围 `20000-39999`）
+  - 启动后直接输出 `UI_URL=http://127.0.0.1:<port>`
+  - 本机实测：返回 `UI_URL=http://127.0.0.1:36950`，`curl` 可访问首页
+  - 可选严格模式：`NEXTCLAW_REQUIRE_INSTALLER_BIN=1 pnpm installer:verify:ui`
