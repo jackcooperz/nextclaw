@@ -9,6 +9,16 @@ type FeatureItem = {
   description: string;
 };
 
+type LogoItem = {
+  name: string;
+  logo: string;
+};
+
+type DeployPlatform = {
+  icon: string;
+  label: string;
+};
+
 type LandingCopy = {
   navFeatures: string;
   navDocs: string;
@@ -43,6 +53,15 @@ type LandingCopy = {
   terminalHeader: string;
   terminalStarted: string;
   copiedText: string;
+  providersTitle: string;
+  providersSubtitle: string;
+  providers: LogoItem[];
+  channelsTitle: string;
+  channelsSubtitle: string;
+  channels: LogoItem[];
+  deployTitle: string;
+  deploySubtitle: string;
+  deployPlatforms: DeployPlatform[];
 };
 
 declare global {
@@ -142,7 +161,44 @@ const COPY: Record<Locale, LandingCopy> = {
     communityScanHint: 'Scan to join',
     terminalHeader: 'nextclaw - bash',
     terminalStarted: 'NextClaw started',
-    copiedText: 'Copied'
+    copiedText: 'Copied',
+    providersTitle: '10+ AI Providers',
+    providersSubtitle: 'Switch between any major AI provider. No lock-in, no rewiring.',
+    providers: [
+      { name: 'OpenAI', logo: '/logos/openai.svg' },
+      { name: 'Gemini', logo: '/logos/gemini.svg' },
+      { name: 'DeepSeek', logo: '/logos/deepseek.png' },
+      { name: 'Groq', logo: '/logos/groq.svg' },
+      { name: 'OpenRouter', logo: '/logos/openrouter.svg' },
+      { name: 'MiniMax', logo: '/logos/minimax.svg' },
+      { name: 'Moonshot', logo: '/logos/moonshot.png' },
+      { name: 'DashScope', logo: '/logos/dashscope.png' },
+      { name: 'Zhipu', logo: '/logos/zhipu.svg' },
+      { name: 'vLLM', logo: '/logos/vllm.svg' }
+    ],
+    channelsTitle: '10+ Message Channels',
+    channelsSubtitle: 'Connect your agent to every major messaging platform — including Chinese domestic apps.',
+    channels: [
+      { name: 'Discord', logo: '/logos/discord.svg' },
+      { name: 'Telegram', logo: '/logos/telegram.svg' },
+      { name: 'Feishu', logo: '/logos/feishu.svg' },
+      { name: 'QQ', logo: '/logos/qq.svg' },
+      { name: 'WhatsApp', logo: '/logos/whatsapp.svg' },
+      { name: 'Slack', logo: '/logos/slack.svg' },
+      { name: 'DingTalk', logo: '/logos/dingtalk.svg' },
+      { name: 'WeCom', logo: '/logos/wecom.svg' },
+      { name: 'Mochat', logo: '/logos/mochat.svg' },
+      { name: 'Email', logo: '/logos/email.svg' }
+    ],
+    deployTitle: 'Deploy Anywhere',
+    deploySubtitle: 'Runs on your laptop, a cloud VM, or a Docker container. Windows, macOS, and Linux all supported.',
+    deployPlatforms: [
+      { icon: 'monitor', label: 'Windows' },
+      { icon: 'laptop-2', label: 'macOS' },
+      { icon: 'terminal', label: 'Linux' },
+      { icon: 'cloud', label: 'Cloud VMs' },
+      { icon: 'box', label: 'Docker' }
+    ]
   },
   zh: {
     navFeatures: '功能',
@@ -208,7 +264,44 @@ const COPY: Record<Locale, LandingCopy> = {
     communityScanHint: '扫码加群',
     terminalHeader: 'nextclaw - bash',
     terminalStarted: 'NextClaw 已启动',
-    copiedText: '已复制'
+    copiedText: '已复制',
+    providersTitle: '10+ AI 提供商',
+    providersSubtitle: '随时切换任意主流 AI 提供商，不锁定，不重新配置。',
+    providers: [
+      { name: 'OpenAI', logo: '/logos/openai.svg' },
+      { name: 'Gemini', logo: '/logos/gemini.svg' },
+      { name: 'DeepSeek', logo: '/logos/deepseek.png' },
+      { name: 'Groq', logo: '/logos/groq.svg' },
+      { name: 'OpenRouter', logo: '/logos/openrouter.svg' },
+      { name: 'MiniMax', logo: '/logos/minimax.svg' },
+      { name: 'Moonshot', logo: '/logos/moonshot.png' },
+      { name: '通义千问', logo: '/logos/dashscope.png' },
+      { name: '智谱', logo: '/logos/zhipu.svg' },
+      { name: 'vLLM', logo: '/logos/vllm.svg' }
+    ],
+    channelsTitle: '10+ 消息渠道',
+    channelsSubtitle: '一个网关覆盖所有主流消息平台，国内外渠道全支持。',
+    channels: [
+      { name: 'Discord', logo: '/logos/discord.svg' },
+      { name: 'Telegram', logo: '/logos/telegram.svg' },
+      { name: '飞书', logo: '/logos/feishu.svg' },
+      { name: 'QQ', logo: '/logos/qq.svg' },
+      { name: 'WhatsApp', logo: '/logos/whatsapp.svg' },
+      { name: 'Slack', logo: '/logos/slack.svg' },
+      { name: '钉钉', logo: '/logos/dingtalk.svg' },
+      { name: '企业微信', logo: '/logos/wecom.svg' },
+      { name: 'Mochat', logo: '/logos/mochat.svg' },
+      { name: 'Email', logo: '/logos/email.svg' }
+    ],
+    deployTitle: '随处部署',
+    deploySubtitle: '支持本地笔记本、云服务器或 Docker 容器部署，兼容 Windows、macOS、Linux。',
+    deployPlatforms: [
+      { icon: 'monitor', label: 'Windows' },
+      { icon: 'laptop-2', label: 'macOS' },
+      { icon: 'terminal', label: 'Linux' },
+      { icon: 'cloud', label: '云服务器' },
+      { icon: 'box', label: 'Docker' }
+    ]
   }
 };
 
@@ -360,6 +453,50 @@ class LandingPage {
             </div>
           </div>
         </main>
+
+        <section class="py-20 px-6 z-10 w-full max-w-5xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">${this.copy.deployTitle}</h2>
+            <p class="text-muted-foreground text-lg max-w-2xl mx-auto">${this.copy.deploySubtitle}</p>
+          </div>
+          <div class="flex flex-wrap justify-center gap-6">
+            ${this.copy.deployPlatforms.map((p) => `
+              <div class="glass-card rounded-2xl p-6 flex flex-col items-center gap-3 w-36 hover:-translate-y-1 transition-transform border border-border/50">
+                <div class="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary">
+                  <i data-lucide="${p.icon}" class="w-6 h-6"></i>
+                </div>
+                <span class="text-sm font-medium">${p.label}</span>
+              </div>`).join('')}
+          </div>
+        </section>
+
+        <section class="py-20 px-6 z-10 w-full max-w-6xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">${this.copy.channelsTitle}</h2>
+            <p class="text-muted-foreground text-lg max-w-2xl mx-auto">${this.copy.channelsSubtitle}</p>
+          </div>
+          <div class="flex flex-wrap justify-center gap-4">
+            ${this.copy.channels.map((c) => `
+              <div class="glass-card rounded-2xl px-5 py-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border border-border/50">
+                <img src="${c.logo}" alt="${c.name}" class="w-7 h-7 object-contain flex-shrink-0" />
+                <span class="text-sm font-medium whitespace-nowrap">${c.name}</span>
+              </div>`).join('')}
+          </div>
+        </section>
+
+        <section class="py-20 px-6 z-10 w-full max-w-6xl mx-auto">
+          <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-4xl font-bold tracking-tight mb-4">${this.copy.providersTitle}</h2>
+            <p class="text-muted-foreground text-lg max-w-2xl mx-auto">${this.copy.providersSubtitle}</p>
+          </div>
+          <div class="flex flex-wrap justify-center gap-4">
+            ${this.copy.providers.map((p) => `
+              <div class="glass-card rounded-2xl px-5 py-3 flex items-center gap-3 hover:-translate-y-0.5 transition-transform border border-border/50">
+                <img src="${p.logo}" alt="${p.name}" class="w-7 h-7 object-contain flex-shrink-0" />
+                <span class="text-sm font-medium whitespace-nowrap">${p.name}</span>
+              </div>`).join('')}
+          </div>
+        </section>
 
         <section id="features" class="relative py-24 px-6 z-10 w-full max-w-7xl mx-auto">
           <div class="text-center mb-16 animate-slide-up opacity-0 relative" style="animation-delay: 0.1s">
