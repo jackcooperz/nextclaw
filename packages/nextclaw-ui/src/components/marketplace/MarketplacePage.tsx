@@ -2,13 +2,19 @@
 import type {
   MarketplaceInstalledRecord,
   MarketplaceItemSummary,
+  MarketplaceLocalizedTextMap,
   MarketplaceManageAction,
+  MarketplacePluginContentView,
+  MarketplaceSkillContentView,
   MarketplaceSort,
   MarketplaceItemType
 } from '@/api/types';
+import { fetchMarketplacePluginContent, fetchMarketplaceSkillContent } from '@/api/marketplace';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs } from '@/components/ui/tabs-custom';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useDocBrowser } from '@/components/doc-browser';
+import { useI18n } from '@/components/providers/I18nProvider';
 import { useConfirmDialog } from '@/hooks/useConfirmDialog';
 import {
   useInstallMarketplaceItem,
@@ -123,16 +129,68 @@ function findCatalogItemForRecord(
   return catalogLookup.get(toLookupKey(record.type, record.label));
 }
 
+function buildLocaleFallbacks(language: string): string[] {
+  const normalized = language.trim().toLowerCase().replace(/_/g, '-');
+  const base = normalized.split('-')[0];
+  const fallbacks = [normalized, base, 'en'];
+  return Array.from(new Set(fallbacks.filter(Boolean)));
+}
+
+function normalizeLocaleTag(locale: string): string {
+  return locale.trim().toLowerCase().replace(/_/g, '-');
+}
+
+function pickLocalizedText(
+  localized: MarketplaceLocalizedTextMap | undefined,
+  fallback: string | undefined,
+  localeFallbacks: string[]
+): string {
+  if (localized) {
+    const entries = Object.entries(localized)
+      .map(([locale, text]) => ({ locale: normalizeLocaleTag(locale), text: typeof text === 'string' ? text.trim() : '' }))
+      .filter((entry) => entry.text.length > 0);
+
+    if (entries.length > 0) {
+      const exactMap = new Map(entries.map((entry) => [entry.locale, entry.text] as const));
+
+      for (const locale of localeFallbacks) {
+        const normalizedLocale = normalizeLocaleTag(locale);
+        const exact = exactMap.get(normalizedLocale);
+        if (exact) {
+          return exact;
+        }
+      }
+
+      for (const locale of localeFallbacks) {
+        const base = normalizeLocaleTag(locale).split('-')[0];
+        if (!base) {
+          continue;
+        }
+        const matched = entries.find((entry) => entry.locale === base || entry.locale.startsWith(`${base}-`));
+        if (matched) {
+          return matched.text;
+        }
+      }
+
+      return entries[0]?.text ?? '';
+    }
+  }
+
+  return fallback?.trim() ?? '';
+}
+
 function matchInstalledSearch(
   record: MarketplaceInstalledRecord,
   item: MarketplaceItemSummary | undefined,
-  query: string
+  query: string,
+  localeFallbacks: string[]
 ): boolean {
   const normalizedQuery = normalizeMarketplaceKey(query);
   if (!normalizedQuery) {
     return true;
   }
 
+  const localizedSummary = pickLocalizedText(item?.summaryI18n, item?.summary, localeFallbacks);
   const values = [
     record.id,
     record.spec,
@@ -140,6 +198,7 @@ function matchInstalledSearch(
     item?.name,
     item?.slug,
     item?.summary,
+    localizedSummary,
     ...(item?.tags ?? [])
   ];
 
@@ -166,10 +225,91 @@ function ItemIcon({ name, fallback }: { name?: string; fallback: string }) {
   const letters = displayName.substring(0, 2).toUpperCase();
   const colorClass = getAvatarColor(displayName);
   return (
-    <div className={cn("flex items-center justify-center w-10 h-10 rounded-xl text-white font-semibold text-sm shrink-0", colorClass)}>
+    <div className={cn('flex items-center justify-center w-10 h-10 rounded-xl text-white font-semibold text-sm shrink-0', colorClass)}>
       {letters}
     </div>
   );
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function buildGenericDetailDataUrl(params: {
+  title: string;
+  typeLabel: string;
+  spec: string;
+  summary?: string;
+  description?: string;
+  metadataRaw?: string;
+  contentRaw?: string;
+  sourceUrl?: string;
+  sourceLabel?: string;
+  tags?: string[];
+  author?: string;
+}): string {
+  const metadata = params.metadataRaw?.trim() || '-';
+  const content = params.contentRaw?.trim() || '-';
+  const summary = params.summary?.trim();
+  const description = params.description?.trim();
+  const shouldShowDescription = Boolean(description) && description !== summary;
+
+  const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${escapeHtml(params.title)}</title>
+    <style>
+      :root { color-scheme: light; }
+      body { margin: 0; background: #f7f9fc; color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+      .wrap { max-width: 980px; margin: 0 auto; padding: 28px 20px 40px; }
+      .hero { border: 1px solid #dbeafe; border-radius: 16px; background: linear-gradient(180deg, #eff6ff, #ffffff); padding: 20px; box-shadow: 0 6px 20px rgba(30, 64, 175, 0.08); }
+      .hero h1 { margin: 0; font-size: 26px; }
+      .meta { margin-top: 8px; color: #475569; font-size: 13px; }
+      .summary { margin-top: 14px; font-size: 14px; line-height: 1.7; color: #334155; }
+      .grid { display: grid; grid-template-columns: 260px 1fr; gap: 14px; margin-top: 16px; }
+      .card { border: 1px solid #e2e8f0; background: #fff; border-radius: 14px; overflow: hidden; }
+      .card h2 { margin: 0; padding: 12px 14px; font-size: 13px; font-weight: 700; color: #1d4ed8; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+      .card .body { padding: 12px 14px; font-size: 13px; color: #334155; line-height: 1.7; }
+      .code { white-space: pre-wrap; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.6; margin: 0; }
+      .tags { margin-top: 10px; }
+      .tag { display: inline-block; margin: 0 6px 6px 0; padding: 4px 9px; border-radius: 999px; background: #e0e7ff; color: #3730a3; font-size: 11px; }
+      .source { color: #2563eb; text-decoration: none; }
+      @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+    </style>
+  </head>
+  <body>
+    <main class="wrap">
+      <section class="hero">
+        <h1>${escapeHtml(params.title)}</h1>
+        <div class="meta">${escapeHtml(params.typeLabel)} · ${escapeHtml(params.spec)}${params.author ? ` · ${escapeHtml(params.author)}` : ''}</div>
+        ${summary ? `<p class="summary">${escapeHtml(summary)}</p>` : ''}
+        ${shouldShowDescription ? `<p class="summary">${escapeHtml(description as string)}</p>` : ''}
+        ${params.tags && params.tags.length > 0 ? `<div class="tags">${params.tags.map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join('')}</div>` : ''}
+        ${params.sourceUrl ? `<p class="meta" style="margin-top:12px;">${escapeHtml(params.sourceLabel ?? 'Source')}: <a class="source" href="${escapeHtml(params.sourceUrl)}" target="_blank" rel="noopener noreferrer">${escapeHtml(params.sourceUrl)}</a></p>` : ''}
+      </section>
+
+      <section class="grid">
+        <article class="card">
+          <h2>Metadata</h2>
+          <div class="body"><pre class="code">${escapeHtml(metadata)}</pre></div>
+        </article>
+        <article class="card">
+          <h2>Content</h2>
+          <div class="body"><pre class="code">${escapeHtml(content)}</pre></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>`;
+
+  return `data:text/html;charset=utf-8,${encodeURIComponent(html)}`;
 }
 
 function FilterPanel(props: {
@@ -212,8 +352,10 @@ function FilterPanel(props: {
 function MarketplaceListCard(props: {
   item?: MarketplaceItemSummary;
   record?: MarketplaceInstalledRecord;
+  localeFallbacks: string[];
   installState: InstallState;
   manageState: ManageState;
+  onOpen: () => void;
   onInstall: (item: MarketplaceItemSummary) => void;
   onManage: (action: MarketplaceManageAction, record: MarketplaceInstalledRecord) => void;
 }) {
@@ -221,7 +363,8 @@ function MarketplaceListCard(props: {
   const pluginRecord = record?.type === 'plugin' ? record : undefined;
   const type = props.item?.type ?? record?.type;
   const title = props.item?.name ?? record?.label ?? record?.id ?? record?.spec ?? t('marketplaceUnknownItem');
-  const summary = props.item?.summary ?? (record ? t('marketplaceInstalledLocalSummary') : '');
+  const summary = pickLocalizedText(props.item?.summaryI18n, props.item?.summary, props.localeFallbacks)
+    || (record ? t('marketplaceInstalledLocalSummary') : '');
   const spec = props.item?.install.spec ?? record?.spec ?? '';
 
   const targetId = record?.id || record?.spec;
@@ -239,14 +382,17 @@ function MarketplaceListCard(props: {
   const displayType = type === 'plugin' ? t('marketplaceTypePlugin') : type === 'skill' ? t('marketplaceTypeSkill') : t('marketplaceTypeExtension');
 
   return (
-    <article className="group bg-white border border-gray-200/40 hover:border-gray-200/80 rounded-2xl px-5 py-4 hover:shadow-md shadow-sm transition-all flex items-start gap-3.5 justify-between cursor-default">
+    <article
+      onClick={props.onOpen}
+      className="group bg-white border border-gray-200/40 hover:border-blue-300/80 rounded-2xl px-5 py-4 hover:shadow-md shadow-sm transition-all flex items-start gap-3.5 justify-between cursor-pointer"
+    >
       <div className="flex gap-3 min-w-0 flex-1 h-full items-start">
         <ItemIcon name={title} fallback={spec || t('marketplaceTypeExtension')} />
         <div className="min-w-0 flex-1 flex flex-col justify-center h-full">
           <TooltipProvider delayDuration={400}>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="text-[14px] font-semibold text-gray-900 truncate leading-tight cursor-default">{title}</div>
+                <div className="text-[14px] font-semibold text-gray-900 truncate leading-tight">{title}</div>
               </TooltipTrigger>
               <TooltipContent className="max-w-[300px] text-xs">
                 {title}
@@ -260,7 +406,7 @@ function MarketplaceListCard(props: {
                   <span className="text-[10px] text-gray-300">•</span>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <span className="text-[11px] text-gray-400 truncate max-w-full font-mono cursor-default">{spec}</span>
+                      <span className="text-[11px] text-gray-400 truncate max-w-full font-mono">{spec}</span>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-[300px] text-xs font-mono break-all">
                       {spec}
@@ -272,7 +418,7 @@ function MarketplaceListCard(props: {
 
             <Tooltip>
               <TooltipTrigger asChild>
-                <p className="text-[12px] text-gray-500/90 line-clamp-1 transition-colors leading-relaxed text-left cursor-default">{summary}</p>
+                <p className="text-[12px] text-gray-500/90 line-clamp-1 transition-colors leading-relaxed text-left">{summary}</p>
               </TooltipTrigger>
               {summary && (
                 <TooltipContent className="max-w-[400px] text-xs leading-relaxed">
@@ -287,7 +433,10 @@ function MarketplaceListCard(props: {
       <div className="shrink-0 flex items-center h-full">
         {props.item && !record && (
           <button
-            onClick={() => props.onInstall(props.item as MarketplaceItemSummary)}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onInstall(props.item as MarketplaceItemSummary);
+            }}
             disabled={isInstalling}
             className="inline-flex items-center gap-1.5 h-8 px-4 rounded-xl text-xs font-medium bg-primary text-white hover:bg-primary-600 disabled:opacity-50 transition-colors"
           >
@@ -298,7 +447,10 @@ function MarketplaceListCard(props: {
         {pluginRecord && canToggle && (
           <button
             disabled={props.manageState.isPending}
-            onClick={() => props.onManage(isDisabled ? 'enable' : 'disable', pluginRecord)}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onManage(isDisabled ? 'enable' : 'disable', pluginRecord);
+            }}
             className="inline-flex items-center h-8 px-4 rounded-xl text-xs font-medium border border-gray-200/80 text-gray-600 bg-white hover:bg-gray-50 hover:border-gray-300 disabled:opacity-50 transition-colors"
           >
             {busyForRecord && props.manageState.action !== 'uninstall'
@@ -310,7 +462,10 @@ function MarketplaceListCard(props: {
         {record && canUninstall && (
           <button
             disabled={props.manageState.isPending}
-            onClick={() => props.onManage('uninstall', record)}
+            onClick={(event) => {
+              event.stopPropagation();
+              props.onManage('uninstall', record);
+            }}
             className="inline-flex items-center h-8 px-4 rounded-xl text-xs font-medium border border-rose-100 text-rose-500 bg-white hover:bg-rose-50 hover:border-rose-200 disabled:opacity-50 transition-colors"
           >
             {busyForRecord && props.manageState.action === 'uninstall' ? t('marketplaceRemoving') : t('marketplaceUninstall')}
@@ -354,6 +509,8 @@ function PaginationBar(props: {
 export function MarketplacePage() {
   const navigate = useNavigate();
   const params = useParams<{ type?: string }>();
+  const { language } = useI18n();
+  const docBrowser = useDocBrowser();
 
   const routeType: MarketplaceRouteType | null = useMemo(() => {
     if (params.type === 'plugins' || params.type === 'skills') {
@@ -369,6 +526,8 @@ export function MarketplacePage() {
   }, [routeType, navigate]);
 
   const typeFilter: MarketplaceItemType = routeType === 'skills' ? 'skill' : 'plugin';
+  const localeFallbacks = useMemo(() => buildLocaleFallbacks(language), [language]);
+
   const isPluginModule = typeFilter === 'plugin';
   const copyKeys = isPluginModule
     ? {
@@ -461,7 +620,7 @@ export function MarketplacePage() {
         record,
         item: findCatalogItemForRecord(record, catalogLookup)
       }))
-      .filter((entry) => matchInstalledSearch(entry.record, entry.item, query));
+      .filter((entry) => matchInstalledSearch(entry.record, entry.item, query, localeFallbacks));
 
     entries.sort((left, right) => {
       const leftTs = left.record.installedAt ? Date.parse(left.record.installedAt) : Number.NaN;
@@ -477,7 +636,7 @@ export function MarketplacePage() {
     });
 
     return entries;
-  }, [installedRecords, typeFilter, catalogLookup, query]);
+  }, [installedRecords, typeFilter, catalogLookup, query, localeFallbacks]);
 
   const total = scope === 'installed' ? installedEntries.length : (itemsQuery.data?.total ?? 0);
   const totalPages = scope === 'installed' ? 1 : (itemsQuery.data?.totalPages ?? 0);
@@ -509,6 +668,7 @@ export function MarketplacePage() {
     { id: 'all', label: t(copyKeys.tabMarketplace) },
     { id: 'installed', label: t(copyKeys.tabInstalled), count: installedQuery.data?.total ?? 0 }
   ];
+
   const handleInstall = async (item: MarketplaceItemSummary) => {
     const installSpec = item.install.spec;
     if (installingSpecs.has(installSpec)) {
@@ -577,6 +737,82 @@ export function MarketplacePage() {
     });
   };
 
+  const openItemDetail = async (item?: MarketplaceItemSummary, record?: MarketplaceInstalledRecord) => {
+    const title = item?.name ?? record?.label ?? record?.id ?? record?.spec ?? t('marketplaceUnknownItem');
+
+    if (!item) {
+      const url = buildGenericDetailDataUrl({
+        title,
+        typeLabel: record?.type === 'plugin' ? t('marketplaceTypePlugin') : t('marketplaceTypeSkill'),
+        spec: record?.spec ?? '-',
+        summary: t('marketplaceInstalledLocalSummary'),
+        metadataRaw: JSON.stringify(record ?? {}, null, 2),
+        contentRaw: '-'
+      });
+      docBrowser.open(url, { newTab: true, title, kind: 'content' });
+      return;
+    }
+
+    const summary = pickLocalizedText(item.summaryI18n, item.summary, localeFallbacks);
+
+    if (item.type === 'skill') {
+      try {
+        const content: MarketplaceSkillContentView = await fetchMarketplaceSkillContent(item.slug);
+        const url = buildGenericDetailDataUrl({
+          title,
+          typeLabel: t('marketplaceTypeSkill'),
+          spec: item.install.spec,
+          summary,
+          metadataRaw: content.metadataRaw,
+          contentRaw: content.bodyRaw || content.raw,
+          sourceUrl: content.sourceUrl,
+          sourceLabel: `Source (${content.source})`,
+          tags: item.tags,
+          author: item.author
+        });
+        docBrowser.open(url, { newTab: true, title, kind: 'content' });
+      } catch (error) {
+        const url = buildGenericDetailDataUrl({
+          title,
+          typeLabel: t('marketplaceTypeSkill'),
+          spec: item.install.spec,
+          summary,
+          metadataRaw: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2),
+          contentRaw: t('marketplaceOperationFailed')
+        });
+        docBrowser.open(url, { newTab: true, title, kind: 'content' });
+      }
+      return;
+    }
+
+    try {
+      const content: MarketplacePluginContentView = await fetchMarketplacePluginContent(item.slug);
+      const url = buildGenericDetailDataUrl({
+        title,
+        typeLabel: t('marketplaceTypePlugin'),
+        spec: item.install.spec,
+        summary,
+        metadataRaw: content.metadataRaw,
+        contentRaw: content.bodyRaw || content.raw || item.summary,
+        sourceUrl: content.sourceUrl,
+        sourceLabel: `Source (${content.source})`,
+        tags: item.tags,
+        author: item.author
+      });
+      docBrowser.open(url, { newTab: true, title, kind: 'content' });
+    } catch (error) {
+      const url = buildGenericDetailDataUrl({
+        title,
+        typeLabel: t('marketplaceTypePlugin'),
+        spec: item.install.spec,
+        summary,
+        metadataRaw: JSON.stringify({ error: error instanceof Error ? error.message : String(error) }, null, 2),
+        contentRaw: '-'
+      });
+      docBrowser.open(url, { newTab: true, title, kind: 'content' });
+    }
+  };
+
   return (
     <PageLayout>
       <PageHeader title={t(copyKeys.pageTitle)} description={t(copyKeys.pageDescription)} />
@@ -628,8 +864,10 @@ export function MarketplacePage() {
               key={item.id}
               item={item}
               record={findInstalledRecordForItem(item, installedRecordLookup)}
+              localeFallbacks={localeFallbacks}
               installState={installState}
               manageState={manageState}
+              onOpen={() => void openItemDetail(item, findInstalledRecordForItem(item, installedRecordLookup))}
               onInstall={handleInstall}
               onManage={handleManage}
             />
@@ -640,8 +878,10 @@ export function MarketplacePage() {
               key={entry.key}
               item={entry.item}
               record={entry.record}
+              localeFallbacks={localeFallbacks}
               installState={installState}
               manageState={manageState}
+              onOpen={() => void openItemDetail(entry.item, entry.record)}
               onInstall={handleInstall}
               onManage={handleManage}
             />

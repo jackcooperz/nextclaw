@@ -23,7 +23,15 @@
         "command": "nextclaw skills install weather"
       },
       "publishedAt": "2025-07-10T10:00:00.000Z",
-      "updatedAt": "2026-02-16T09:10:00.000Z"
+      "updatedAt": "2026-02-16T09:10:00.000Z",
+      "summaryI18n": {
+        "en": "Builtin NextClaw skill for weather lookup workflows.",
+        "zh": "NextClaw 内置技能，用于天气查询工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Provides quick weather investigation workflow in NextClaw.",
+        "zh": "在 NextClaw 中提供快速天气查询工作流。"
+      }
     },
     {
       "id": "skill-summarize",
@@ -46,7 +54,15 @@
         "command": "nextclaw skills install summarize"
       },
       "publishedAt": "2025-07-01T10:00:00.000Z",
-      "updatedAt": "2026-02-15T07:30:00.000Z"
+      "updatedAt": "2026-02-15T07:30:00.000Z",
+      "summaryI18n": {
+        "en": "Builtin NextClaw skill for structured summarization.",
+        "zh": "NextClaw 内置技能，用于结构化摘要。"
+      },
+      "descriptionI18n": {
+        "en": "Provides summarization workflow for files and long texts in NextClaw.",
+        "zh": "在 NextClaw 中提供文件与长文本的摘要工作流。"
+      }
     },
     {
       "id": "skill-github",
@@ -69,7 +85,15 @@
         "command": "nextclaw skills install github"
       },
       "publishedAt": "2025-06-20T10:00:00.000Z",
-      "updatedAt": "2026-02-14T07:15:00.000Z"
+      "updatedAt": "2026-02-14T07:15:00.000Z",
+      "summaryI18n": {
+        "en": "Builtin NextClaw skill for GitHub-oriented workflows.",
+        "zh": "NextClaw 内置技能，用于 GitHub 工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Provides issue, PR and repository workflow guidance in NextClaw.",
+        "zh": "在 NextClaw 中提供 Issue、PR 与仓库相关工作流指引。"
+      }
     },
     {
       "id": "skill-tmux",
@@ -92,7 +116,15 @@
         "command": "nextclaw skills install tmux"
       },
       "publishedAt": "2025-06-10T10:00:00.000Z",
-      "updatedAt": "2026-02-13T11:40:00.000Z"
+      "updatedAt": "2026-02-13T11:40:00.000Z",
+      "summaryI18n": {
+        "en": "Builtin NextClaw skill for terminal/tmux collaboration workflows.",
+        "zh": "NextClaw 内置技能，用于终端/Tmux 协作工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Provides tmux-based task execution workflow guidance in NextClaw.",
+        "zh": "在 NextClaw 中提供基于 Tmux 的任务执行工作流指引。"
+      }
     },
     {
       "id": "skill-gog",
@@ -115,7 +147,15 @@
         "command": "nextclaw skills install gog"
       },
       "publishedAt": "2025-06-01T10:00:00.000Z",
-      "updatedAt": "2026-02-12T11:00:00.000Z"
+      "updatedAt": "2026-02-12T11:00:00.000Z",
+      "summaryI18n": {
+        "en": "Builtin NextClaw skill for graph-oriented generation workflows.",
+        "zh": "NextClaw 内置技能，用于图谱导向生成工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Provides graph and planning oriented workflow guidance in NextClaw.",
+        "zh": "在 NextClaw 中提供图谱与规划导向工作流指引。"
+      }
     },
     {
       "id": "skill-pdf-anthropic",
@@ -139,7 +179,15 @@
         "command": "npx skild install anthropics/skills/skills/pdf --target agents --local --skill pdf"
       },
       "publishedAt": "2025-06-01T10:00:00.000Z",
-      "updatedAt": "2026-02-27T23:05:50.000Z"
+      "updatedAt": "2026-02-27T23:05:50.000Z",
+      "summaryI18n": {
+        "en": "Anthropic skill for PDF read/merge/split/OCR workflows.",
+        "zh": "Anthropic 技能，用于 PDF 读取/合并/拆分/OCR 工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Use this skill for reading, extracting, combining, splitting, rotating, and OCR processing for PDF files.",
+        "zh": "使用该技能可读取、提取、合并、拆分、旋转并对 PDF 执行 OCR 处理。"
+      }
     },
     {
       "id": "skill-docx-anthropic",
@@ -163,7 +211,15 @@
         "command": "npx skild install anthropics/skills/skills/docx --target agents --local --skill docx"
       },
       "publishedAt": "2025-06-01T10:00:00.000Z",
-      "updatedAt": "2026-02-27T23:05:50.000Z"
+      "updatedAt": "2026-02-27T23:05:50.000Z",
+      "summaryI18n": {
+        "en": "Anthropic skill for creating and editing Word documents.",
+        "zh": "Anthropic 技能，用于创建和编辑 Word 文档。"
+      },
+      "descriptionI18n": {
+        "en": "Use this skill for creating, reading, editing, and restructuring .docx documents.",
+        "zh": "使用该技能可创建、读取、编辑并重构 .docx 文档。"
+      }
     },
     {
       "id": "skill-pptx-anthropic",
@@ -187,7 +243,15 @@
         "command": "npx skild install anthropics/skills/skills/pptx --target agents --local --skill pptx"
       },
       "publishedAt": "2025-06-01T10:00:00.000Z",
-      "updatedAt": "2026-02-27T23:05:50.000Z"
+      "updatedAt": "2026-02-27T23:05:50.000Z",
+      "summaryI18n": {
+        "en": "Anthropic skill for presentation deck operations.",
+        "zh": "Anthropic 技能，用于演示文稿操作。"
+      },
+      "descriptionI18n": {
+        "en": "Use this skill for creating, parsing, editing, and reorganizing .pptx presentations.",
+        "zh": "使用该技能可创建、解析、编辑并重组 .pptx 演示文稿。"
+      }
     },
     {
       "id": "skill-xlsx-anthropic",
@@ -211,7 +275,15 @@
         "command": "npx skild install anthropics/skills/skills/xlsx --target agents --local --skill xlsx"
       },
       "publishedAt": "2025-06-01T10:00:00.000Z",
-      "updatedAt": "2026-02-27T23:05:50.000Z"
+      "updatedAt": "2026-02-27T23:05:50.000Z",
+      "summaryI18n": {
+        "en": "Anthropic skill for spreadsheet-oriented document workflows.",
+        "zh": "Anthropic 技能，用于表格文档工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Use this skill for opening, editing, cleaning, and converting spreadsheet files such as .xlsx and .csv.",
+        "zh": "使用该技能可打开、编辑、清洗并转换 .xlsx 与 .csv 等表格文件。"
+      }
     },
     {
       "id": "skill-bird-openclaw",
@@ -236,7 +308,15 @@
         "command": "npx skild install openclaw/skills/skills/iqbalnaveliano/bird-su --target agents --local --skill bird"
       },
       "publishedAt": "2026-02-05T13:02:45.000Z",
-      "updatedAt": "2026-02-05T13:02:45.000Z"
+      "updatedAt": "2026-02-05T13:02:45.000Z",
+      "summaryI18n": {
+        "en": "OpenClaw community skill for X/Twitter read/search/post workflows.",
+        "zh": "OpenClaw 社区技能，用于 X/Twitter 读取/搜索/发布工作流。"
+      },
+      "descriptionI18n": {
+        "en": "Use bird CLI to read threads, search posts, and draft tweets/replies in agent workflows.",
+        "zh": "使用 bird CLI 在代理工作流中读取线程、搜索帖子并起草推文/回复。"
+      }
     },
     {
       "id": "skill-cloudflare-deploy-openai",
@@ -260,7 +340,15 @@
         "command": "npx skild install openai/skills/skills/.curated/cloudflare-deploy --target agents --local --skill cloudflare-deploy"
       },
       "publishedAt": "2026-02-27T16:14:00.000Z",
-      "updatedAt": "2026-02-27T16:14:00.000Z"
+      "updatedAt": "2026-02-27T16:14:00.000Z",
+      "summaryI18n": {
+        "en": "OpenAI curated skill for deploying apps and infra on Cloudflare.",
+        "zh": "OpenAI 精选技能，用于在 Cloudflare 上部署应用与基础设施。"
+      },
+      "descriptionI18n": {
+        "en": "Use this skill to select Cloudflare products and deploy Workers, Pages, and related services.",
+        "zh": "使用该技能可选择 Cloudflare 产品并部署 Workers、Pages 及相关服务。"
+      }
     }
   ],
   "recommendations": [

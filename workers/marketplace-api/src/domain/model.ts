@@ -12,13 +12,17 @@ export type MarketplaceInstallSpec = {
   command: string;
 };
 
+export type LocalizedTextMap = Record<string, string>;
+
 export type MarketplaceItem = {
   id: string;
   slug: string;
   type: MarketplaceItemType;
   name: string;
   summary: string;
+  summaryI18n: LocalizedTextMap;
   description?: string;
+  descriptionI18n?: LocalizedTextMap;
   tags: string[];
   author: string;
   sourceRepo?: string;
@@ -61,6 +65,7 @@ export type MarketplaceItemSummary = {
   type: MarketplaceItemType;
   name: string;
   summary: string;
+  summaryI18n: LocalizedTextMap;
   tags: string[];
   author: string;
   install: MarketplaceInstallSpec;

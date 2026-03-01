@@ -550,6 +550,11 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   marketplaceOperationFailed: { zh: '操作失败', en: 'Operation failed' },
   marketplaceInstalledPluginsCountSuffix: { zh: '个已安装插件', en: 'installed plugins' },
   marketplaceInstalledSkillsCountSuffix: { zh: '个已安装技能', en: 'installed skills' },
+  marketplaceDetailPanelTitle: { zh: '详情预览', en: 'Detail Preview' },
+  marketplaceDetailPanelEmpty: { zh: '点击左侧任意插件/技能，在这里查看详情。', en: 'Click an item on the left to preview details here.' },
+  marketplaceDetailSummary: { zh: '摘要', en: 'Summary' },
+  marketplaceDetailDescription: { zh: '描述', en: 'Description' },
+  marketplaceOpenInDocBrowserTab: { zh: '新标签打开', en: 'Open in New Tab' },
 
   // Status
   connected: { zh: '已连接', en: 'Connected' },
@@ -582,7 +587,7 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   headerValue: { zh: 'Header 值', en: 'Header Value' },
 
   // Doc Browser
-  docBrowserTitle: { zh: '帮助文档', en: 'Help Docs' },
+  docBrowserTitle: { zh: '内嵌浏览器', en: 'Embedded Browser' },
   docBrowserSearchPlaceholder: { zh: '搜索，也可以输入文档地址直接打开', en: 'Search, or enter a doc URL to open' },
   docBrowserUrlPlaceholder: { zh: '输入文档路径，如 /guide/channels', en: 'Enter a doc path, e.g. /guide/channels' },
   docBrowserOpenExternal: { zh: '文档中心打开', en: 'Open in Docs' },
@@ -590,6 +595,9 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   docBrowserDockMode: { zh: '固定到侧栏', en: 'Dock to Sidebar' },
   docBrowserClose: { zh: '关闭', en: 'Close' },
   docBrowserHelp: { zh: '帮助文档', en: 'Help Docs' },
+  docBrowserNewTab: { zh: '新建标签', en: 'New Tab' },
+  docBrowserCloseTab: { zh: '关闭标签', en: 'Close Tab' },
+  docBrowserTabUntitled: { zh: '未命名', en: 'Untitled' },
 };
 
 export function t(key: string, lang: I18nLanguage = getLanguage()): string {

@@ -1,0 +1,291 @@
+/* eslint-disable max-lines-per-function */
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { ConfigSchema, saveConfig } from "@nextclaw/core";
+import { createUiRouter } from "./router.js";
+
+const tempDirs: string[] = [];
+
+function createTempDir(prefix: string): string {
+  const dir = mkdtempSync(join(tmpdir(), prefix));
+  tempDirs.push(dir);
+  return dir;
+}
+
+afterEach(() => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+  vi.restoreAllMocks();
+});
+
+describe("marketplace content routes", () => {
+  it("returns full skill markdown content with metadata and body", async () => {
+    const workspaceDir = createTempDir("nextclaw-ui-skill-content-");
+    const configPath = join(workspaceDir, "config.json");
+    const skillDir = join(workspaceDir, "skills", "weather");
+    mkdirSync(skillDir, { recursive: true });
+    writeFileSync(
+      join(skillDir, "SKILL.md"),
+      `---\nname: weather\ndescription: Local weather skill\n---\n\n# Weather Skill\n\nUse this skill for weather lookups.\n`
+    );
+
+    saveConfig(
+      ConfigSchema.parse({
+        agents: {
+          defaults: {
+            workspace: workspaceDir
+          }
+        }
+      }),
+      configPath
+    );
+
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          data: {
+            id: "skill-weather",
+            slug: "weather",
+            type: "skill",
+            name: "Weather",
+            summary: "Weather summary",
+            summaryI18n: {
+              en: "Weather summary",
+              zh: "天气摘要"
+            },
+            tags: ["skill"],
+            author: "NextClaw",
+            install: {
+              kind: "builtin",
+              spec: "weather",
+              command: "nextclaw skills install weather"
+            },
+            updatedAt: "2026-02-16T09:10:00.000Z",
+            publishedAt: "2025-07-10T10:00:00.000Z"
+          }
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const app = createUiRouter({
+      configPath,
+      publish: () => {},
+      marketplace: {
+        apiBaseUrl: "http://marketplace.example"
+      }
+    });
+
+    const response = await app.request("http://localhost/api/marketplace/skills/items/weather/content");
+    expect(response.status).toBe(200);
+
+    const payload = await response.json() as {
+      ok: boolean;
+      data: {
+        metadataRaw?: string;
+        bodyRaw: string;
+      };
+    };
+
+    expect(payload.ok).toBe(true);
+    expect(payload.data.metadataRaw).toContain("name: weather");
+    expect(payload.data.bodyRaw).toContain("# Weather Skill");
+  });
+
+  it("returns plugin readme-style content", async () => {
+    const workspaceDir = createTempDir("nextclaw-ui-plugin-content-");
+    const configPath = join(workspaceDir, "config.json");
+
+    saveConfig(
+      ConfigSchema.parse({
+        agents: {
+          defaults: {
+            workspace: workspaceDir
+          }
+        }
+      }),
+      configPath
+    );
+
+    const fetchMock = vi.fn(async (target: Request | string) => {
+      const url = typeof target === "string" ? target : target.url;
+
+      if (url.includes("/api/v1/plugins/items/")) {
+        return new Response(
+          JSON.stringify({
+            ok: true,
+            data: {
+              id: "plugin-channel-discord",
+              slug: "channel-plugin-discord",
+              type: "plugin",
+              name: "Discord Channel Plugin",
+              summary: "Discord summary",
+              summaryI18n: {
+                en: "Discord summary",
+                zh: "Discord 摘要"
+              },
+              description: "Plugin description",
+              tags: ["plugin", "discord"],
+              author: "NextClaw",
+              install: {
+                kind: "npm",
+                spec: "@nextclaw/channel-plugin-discord",
+                command: "nextclaw plugins install @nextclaw/channel-plugin-discord"
+              },
+              updatedAt: "2026-02-22T09:40:00.000Z",
+              publishedAt: "2025-12-10T10:00:00.000Z"
+            }
+          }),
+          {
+            status: 200,
+            headers: {
+              "content-type": "application/json"
+            }
+          }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({
+          name: "@nextclaw/channel-plugin-discord",
+          description: "Discord plugin",
+          readme: "# Discord Plugin\n\nREADME content"
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    });
+
+    vi.stubGlobal("fetch", fetchMock);
+
+    const app = createUiRouter({
+      configPath,
+      publish: () => {},
+      marketplace: {
+        apiBaseUrl: "http://marketplace.example"
+      }
+    });
+
+    const response = await app.request("http://localhost/api/marketplace/plugins/items/channel-plugin-discord/content");
+    expect(response.status).toBe(200);
+
+    const payload = await response.json() as {
+      ok: boolean;
+      data: {
+        bodyRaw?: string;
+      };
+    };
+
+    expect(payload.ok).toBe(true);
+    expect(payload.data.bodyRaw).toContain("# Discord Plugin");
+
+    expect(fetchMock).toHaveBeenCalled();
+    const urls = fetchMock.mock.calls.map((call) => {
+      const [target] = call as unknown as [Request | string];
+      return typeof target === "string" ? target : target.url;
+    });
+    expect(urls.some((url) => url.includes("registry.npmjs.org"))).toBe(true);
+  });
+
+  it("normalizes locale-family summary fields for marketplace list responses", async () => {
+    const workspaceDir = createTempDir("nextclaw-ui-plugin-list-i18n-");
+    const configPath = join(workspaceDir, "config.json");
+
+    saveConfig(
+      ConfigSchema.parse({
+        agents: {
+          defaults: {
+            workspace: workspaceDir
+          }
+        }
+      }),
+      configPath
+    );
+
+    const fetchMock = vi.fn(async () => {
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          data: {
+            total: 1,
+            page: 1,
+            pageSize: 50,
+            totalPages: 1,
+            sort: "relevance",
+            items: [
+              {
+                id: "plugin-channel-discord",
+                slug: "channel-plugin-discord",
+                type: "plugin",
+                name: "Discord Channel Plugin",
+                summary: "English summary",
+                summaryI18n: {
+                  "en-US": "English summary",
+                  "zh-CN": "中文摘要"
+                },
+                description: "Description",
+                tags: ["plugin", "discord"],
+                author: "NextClaw",
+                install: {
+                  kind: "npm",
+                  spec: "@nextclaw/channel-plugin-discord",
+                  command: "nextclaw plugins install @nextclaw/channel-plugin-discord"
+                },
+                updatedAt: "2026-02-22T09:40:00.000Z",
+                publishedAt: "2025-12-10T10:00:00.000Z"
+              }
+            ]
+          }
+        }),
+        {
+          status: 200,
+          headers: {
+            "content-type": "application/json"
+          }
+        }
+      );
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const app = createUiRouter({
+      configPath,
+      publish: () => {},
+      marketplace: {
+        apiBaseUrl: "http://marketplace.example"
+      }
+    });
+
+    const response = await app.request("http://localhost/api/marketplace/plugins/items?page=1&pageSize=10");
+    expect(response.status).toBe(200);
+
+    const payload = await response.json() as {
+      ok: boolean;
+      data: {
+        items: Array<{
+          summaryI18n: Record<string, string>;
+        }>;
+      };
+    };
+
+    expect(payload.ok).toBe(true);
+    expect(payload.data.items[0]?.summaryI18n.zh).toBe("中文摘要");
+    expect(payload.data.items[0]?.summaryI18n.en).toBe("English summary");
+  });
+});

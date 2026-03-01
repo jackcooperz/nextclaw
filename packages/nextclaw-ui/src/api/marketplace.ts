@@ -5,7 +5,9 @@ import type {
   MarketplaceManageRequest,
   MarketplaceManageResult,
   MarketplaceInstalledView,
+  MarketplacePluginContentView,
   MarketplaceItemType,
+  MarketplaceSkillContentView,
   MarketplaceItemView,
   MarketplaceListView,
   MarketplaceRecommendationView,
@@ -60,6 +62,28 @@ export async function fetchMarketplaceItem(slug: string, type: MarketplaceItemTy
   const segment = toMarketplaceTypeSegment(type);
   const response = await api.get<MarketplaceItemView>(
     `/api/marketplace/${segment}/items/${encodeURIComponent(slug)}`
+  );
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+
+  return response.data;
+}
+
+export async function fetchMarketplaceSkillContent(slug: string): Promise<MarketplaceSkillContentView> {
+  const response = await api.get<MarketplaceSkillContentView>(
+    `/api/marketplace/skills/items/${encodeURIComponent(slug)}/content`
+  );
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+
+  return response.data;
+}
+
+export async function fetchMarketplacePluginContent(slug: string): Promise<MarketplacePluginContentView> {
+  const response = await api.get<MarketplacePluginContentView>(
+    `/api/marketplace/plugins/items/${encodeURIComponent(slug)}/content`
   );
   if (!response.ok) {
     throw new Error(response.error.message);

@@ -446,12 +446,15 @@ export type MarketplaceInstallSpec = {
   command: string;
 };
 
+export type MarketplaceLocalizedTextMap = Record<string, string>;
+
 export type MarketplaceItemSummary = {
   id: string;
   slug: string;
   type: MarketplaceItemType;
   name: string;
   summary: string;
+  summaryI18n: MarketplaceLocalizedTextMap;
   tags: string[];
   author: string;
   install: MarketplaceInstallSpec;
@@ -460,9 +463,34 @@ export type MarketplaceItemSummary = {
 
 export type MarketplaceItemView = MarketplaceItemSummary & {
   description?: string;
+  descriptionI18n?: MarketplaceLocalizedTextMap;
   sourceRepo?: string;
   homepage?: string;
   publishedAt: string;
+};
+
+export type MarketplaceSkillContentView = {
+  type: 'skill';
+  slug: string;
+  name: string;
+  install: MarketplaceInstallSpec;
+  source: 'workspace' | 'builtin' | 'git' | 'remote';
+  raw: string;
+  metadataRaw?: string;
+  bodyRaw: string;
+  sourceUrl?: string;
+};
+
+export type MarketplacePluginContentView = {
+  type: 'plugin';
+  slug: string;
+  name: string;
+  install: MarketplaceInstallSpec;
+  source: 'npm' | 'repo' | 'remote';
+  raw?: string;
+  bodyRaw?: string;
+  metadataRaw?: string;
+  sourceUrl?: string;
 };
 
 export type MarketplaceListView = {

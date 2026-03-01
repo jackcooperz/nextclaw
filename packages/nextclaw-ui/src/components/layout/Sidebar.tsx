@@ -167,7 +167,7 @@ export function Sidebar() {
           </Select>
         </div>
         <button
-          onClick={() => docBrowser.open()}
+          onClick={() => docBrowser.open(undefined, { kind: 'docs', newTab: true, title: 'Docs' })}
           className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[14px] font-medium transition-all duration-base text-gray-600 hover:bg-[#e4e7ef] hover:text-gray-800"
         >
           <BookOpen className="h-[17px] w-[17px] text-gray-400" />

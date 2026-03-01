@@ -144,7 +144,9 @@ export abstract class InMemorySectionRepositoryBase {
     const name = item.name.toLowerCase();
     const slug = item.slug.toLowerCase();
     const summary = item.summary.toLowerCase();
+    const summaryLocalized = Object.values(item.summaryI18n).map((text) => text.toLowerCase());
     const description = item.description?.toLowerCase() ?? "";
+    const descriptionLocalized = Object.values(item.descriptionI18n ?? {}).map((text) => text.toLowerCase());
     const tags = item.tags.map((tag) => tag.toLowerCase());
 
     if (name.includes(normalized)) {
@@ -156,7 +158,13 @@ export abstract class InMemorySectionRepositoryBase {
     if (summary.includes(normalized)) {
       score += 3;
     }
+    if (summaryLocalized.some((text) => text.includes(normalized))) {
+      score += 3;
+    }
     if (description.includes(normalized)) {
+      score += 2;
+    }
+    if (descriptionLocalized.some((text) => text.includes(normalized))) {
       score += 2;
     }
     if (tags.some((tag) => tag.includes(normalized))) {
@@ -225,6 +233,7 @@ export abstract class InMemorySectionRepositoryBase {
       type: item.type,
       name: item.name,
       summary: item.summary,
+      summaryI18n: item.summaryI18n,
       tags: item.tags,
       author: item.author,
       install: item.install,

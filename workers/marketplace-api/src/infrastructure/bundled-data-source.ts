@@ -7,6 +7,7 @@ import type {
   MarketplaceInstallSpec,
   MarketplaceItem,
   MarketplaceItemType,
+  LocalizedTextMap,
   MarketplaceRecommendationScene
 } from "../domain/model";
 import { BaseMarketplaceDataSource } from "./data-source";
@@ -84,14 +85,20 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
       throw new DomainValidationError(`${path}.type must be ${expectedType}`);
     }
     const type = expectedType;
+    const summary = this.readString(raw.summary, `${path}.summary`);
+    const description = this.readOptionalString(raw.description, `${path}.description`);
 
     return {
       id: this.readString(raw.id, `${path}.id`),
       slug: this.readString(raw.slug, `${path}.slug`),
       type,
       name: this.readString(raw.name, `${path}.name`),
-      summary: this.readString(raw.summary, `${path}.summary`),
-      description: this.readOptionalString(raw.description, `${path}.description`),
+      summary,
+      summaryI18n: this.readLocalizedTextMap(raw.summaryI18n, `${path}.summaryI18n`, summary),
+      description,
+      descriptionI18n: description
+        ? this.readLocalizedTextMap(raw.descriptionI18n, `${path}.descriptionI18n`, description)
+        : undefined,
       tags: this.readStringArray(raw.tags, `${path}.tags`),
       author: this.readString(raw.author, `${path}.author`),
       sourceRepo: this.readOptionalString(raw.sourceRepo, `${path}.sourceRepo`),
@@ -194,6 +201,55 @@ export class BundledMarketplaceDataSource extends BaseMarketplaceDataSource {
     }
 
     return value.map((entry, index) => this.readString(entry, `${path}[${index}]`));
+  }
+
+  private readLocalizedTextMap(value: unknown, path: string, englishFallback: string): LocalizedTextMap {
+    const localized: LocalizedTextMap = {};
+
+    if (this.isRawRecord(value)) {
+      for (const [locale, text] of Object.entries(value)) {
+        if (typeof text !== "string" || text.trim().length === 0) {
+          throw new DomainValidationError(`${path}.${locale} must be a non-empty string`);
+        }
+        localized[locale] = text.trim();
+      }
+    }
+
+    if (!localized.en) {
+      localized.en = this.pickLocaleFamilyValue(localized, "en") ?? englishFallback;
+    }
+    if (!localized.zh) {
+      localized.zh = this.pickLocaleFamilyValue(localized, "zh") ?? localized.en;
+    }
+
+    return localized;
+  }
+
+  private pickLocaleFamilyValue(localized: LocalizedTextMap, localeFamily: string): string | undefined {
+    const normalizedFamily = this.normalizeLocaleTag(localeFamily).split("-")[0];
+    if (!normalizedFamily) {
+      return undefined;
+    }
+
+    let familyMatch: string | undefined;
+    for (const [locale, text] of Object.entries(localized)) {
+      const normalizedLocale = this.normalizeLocaleTag(locale);
+      if (!normalizedLocale) {
+        continue;
+      }
+      if (normalizedLocale === normalizedFamily) {
+        return text;
+      }
+      if (!familyMatch && normalizedLocale.startsWith(`${normalizedFamily}-`)) {
+        familyMatch = text;
+      }
+    }
+
+    return familyMatch;
+  }
+
+  private normalizeLocaleTag(value: string): string {
+    return value.trim().toLowerCase().replace(/_/g, "-");
   }
 
   private isRawRecord(value: unknown): value is RawRecord {

@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { readFile } from "node:fs/promises";
 import * as NextclawCore from "@nextclaw/core";
 import { buildPluginStatusReport } from "@nextclaw/openclaw-compat";
 import {
@@ -29,11 +30,13 @@ import type {
   MarketplaceListView,
   MarketplacePluginInstallRequest,
   MarketplacePluginInstallResult,
+  MarketplacePluginContentView,
   MarketplacePluginManageRequest,
   MarketplacePluginManageResult,
   MarketplaceRecommendationView,
   MarketplaceSkillInstallRequest,
   MarketplaceSkillInstallResult,
+  MarketplaceSkillContentView,
   MarketplaceSkillManageRequest,
   MarketplaceSkillManageResult,
   CronEnableRequest,
@@ -661,6 +664,156 @@ function sanitizeMarketplaceItem<T extends Record<string, unknown>>(item: T): T 
   return next;
 }
 
+const MARKETPLACE_ZH_COPY_BY_SLUG: Record<string, { summary: string; description?: string }> = {
+  weather: {
+    summary: "NextClaw 内置技能，用于天气查询工作流。",
+    description: "在 NextClaw 中提供快速天气查询工作流。"
+  },
+  summarize: {
+    summary: "NextClaw 内置技能，用于结构化摘要。",
+    description: "在 NextClaw 中提供文件与长文本的摘要工作流。"
+  },
+  github: {
+    summary: "NextClaw 内置技能，用于 GitHub 工作流。",
+    description: "在 NextClaw 中提供 Issue、PR 与仓库相关工作流指引。"
+  },
+  tmux: {
+    summary: "NextClaw 内置技能，用于终端/Tmux 协作工作流。",
+    description: "在 NextClaw 中提供基于 Tmux 的任务执行工作流指引。"
+  },
+  gog: {
+    summary: "NextClaw 内置技能，用于图谱导向生成工作流。",
+    description: "在 NextClaw 中提供图谱与规划导向工作流指引。"
+  },
+  pdf: {
+    summary: "Anthropic 技能，用于 PDF 读取/合并/拆分/OCR 工作流。",
+    description: "使用该技能可读取、提取、合并、拆分、旋转并对 PDF 执行 OCR 处理。"
+  },
+  docx: {
+    summary: "Anthropic 技能，用于创建和编辑 Word 文档。",
+    description: "使用该技能可创建、读取、编辑并重构 .docx 文档。"
+  },
+  pptx: {
+    summary: "Anthropic 技能，用于演示文稿操作。",
+    description: "使用该技能可创建、解析、编辑并重组 .pptx 演示文稿。"
+  },
+  xlsx: {
+    summary: "Anthropic 技能，用于表格文档工作流。",
+    description: "使用该技能可打开、编辑、清洗并转换 .xlsx 与 .csv 等表格文件。"
+  },
+  bird: {
+    summary: "OpenClaw 社区技能，用于 X/Twitter 读取/搜索/发布工作流。",
+    description: "使用 bird CLI 在代理工作流中读取线程、搜索帖子并起草推文/回复。"
+  },
+  "cloudflare-deploy": {
+    summary: "OpenAI 精选技能，用于在 Cloudflare 上部署应用与基础设施。",
+    description: "使用该技能可选择 Cloudflare 产品并部署 Workers、Pages 及相关服务。"
+  },
+  "channel-plugin-discord": {
+    summary: "NextClaw 官方插件，用于 Discord 渠道集成。",
+    description: "通过 NextClaw 插件运行时提供 Discord 渠道的入站/出站支持。"
+  },
+  "channel-plugin-telegram": {
+    summary: "NextClaw 官方插件，用于 Telegram 渠道集成。",
+    description: "通过 NextClaw 插件运行时提供 Telegram 渠道的入站/出站支持。"
+  },
+  "channel-plugin-slack": {
+    summary: "NextClaw 官方插件，用于 Slack 渠道集成。",
+    description: "通过 NextClaw 插件运行时提供 Slack 渠道的入站/出站支持。"
+  },
+  "channel-plugin-wecom": {
+    summary: "NextClaw 官方插件，用于企业微信渠道集成。",
+    description: "通过 NextClaw 插件运行时提供企业微信渠道的入站/出站支持。"
+  },
+  "channel-plugin-email": {
+    summary: "NextClaw 官方插件，用于 Email 渠道集成。",
+    description: "通过 NextClaw 插件运行时提供 Email 渠道的入站/出站支持。"
+  },
+  "channel-plugin-whatsapp": {
+    summary: "NextClaw 官方插件，用于 WhatsApp 渠道集成。",
+    description: "通过 NextClaw 插件运行时提供 WhatsApp 渠道的入站/出站支持。"
+  },
+  "channel-plugin-clawbay": {
+    summary: "Clawbay 官方渠道插件，用于 NextClaw 集成。",
+    description: "通过插件运行时为 NextClaw 提供 Clawbay 渠道能力。"
+  }
+};
+
+function readLocalizedMap(value: unknown): Record<string, string> {
+  const localized: Record<string, string> = {};
+  if (!isRecord(value)) {
+    return localized;
+  }
+
+  for (const [key, entry] of Object.entries(value)) {
+    if (typeof entry !== "string" || entry.trim().length === 0) {
+      continue;
+    }
+    localized[key] = entry.trim();
+  }
+  return localized;
+}
+
+function normalizeLocaleTag(value: string): string {
+  return value.trim().toLowerCase().replace(/_/g, "-");
+}
+
+function pickLocaleFamilyValue(localized: Record<string, string>, localeFamily: string): string | undefined {
+  const normalizedFamily = normalizeLocaleTag(localeFamily).split("-")[0];
+  if (!normalizedFamily) {
+    return undefined;
+  }
+
+  let familyMatch: string | undefined;
+  for (const [locale, text] of Object.entries(localized)) {
+    const normalizedLocale = normalizeLocaleTag(locale);
+    if (!normalizedLocale) {
+      continue;
+    }
+    if (normalizedLocale === normalizedFamily) {
+      return text;
+    }
+    if (!familyMatch && normalizedLocale.startsWith(`${normalizedFamily}-`)) {
+      familyMatch = text;
+    }
+  }
+
+  return familyMatch;
+}
+
+function normalizeLocalizedTextMap(primaryText: string, localized: unknown, zhFallback?: string): Record<string, string> {
+  const next = readLocalizedMap(localized);
+  if (!next.en) {
+    next.en = pickLocaleFamilyValue(next, "en") ?? primaryText;
+  }
+  if (!next.zh) {
+    next.zh = pickLocaleFamilyValue(next, "zh")
+      ?? (zhFallback && zhFallback.trim().length > 0 ? zhFallback.trim() : next.en);
+  }
+  return next;
+}
+
+function normalizeMarketplaceItemForUi<T extends MarketplaceItemView | MarketplaceListView["items"][number]>(item: T): T {
+  const zhCopy = MARKETPLACE_ZH_COPY_BY_SLUG[item.slug];
+  const next = {
+    ...item,
+    summaryI18n: normalizeLocalizedTextMap(item.summary, (item as { summaryI18n?: unknown }).summaryI18n, zhCopy?.summary)
+  } as T & {
+    summaryI18n: Record<string, string>;
+    descriptionI18n?: Record<string, string>;
+  };
+
+  if ("description" in item && typeof item.description === "string" && item.description.trim().length > 0) {
+    next.descriptionI18n = normalizeLocalizedTextMap(
+      item.description,
+      (item as { descriptionI18n?: unknown }).descriptionI18n,
+      zhCopy?.description
+    );
+  }
+
+  return next as T;
+}
+
 function toPositiveInt(raw: string | undefined, fallback: number): number {
   if (!raw) {
     return fallback;
@@ -697,6 +850,216 @@ function isSupportedMarketplaceSkillItem(
   }
 
   return item.install.kind === "builtin" && knownSkillNames.has(item.install.spec);
+}
+
+function splitMarkdownFrontmatter(raw: string): { metadataRaw?: string; bodyRaw: string } {
+  const normalized = raw.replace(/\r\n/g, "\n");
+  const match = normalized.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+  if (!match) {
+    return { bodyRaw: normalized };
+  }
+
+  return {
+    metadataRaw: match[1]?.trim() || undefined,
+    bodyRaw: match[2] ?? ""
+  };
+}
+
+async function loadLocalSkillMarkdown(options: UiRouterOptions, skillName: string): Promise<{ raw: string; source: "workspace" | "builtin" } | null> {
+  const config = loadConfigOrDefault(options.configPath);
+  const loader = createSkillsLoader(getWorkspacePathFromConfig(config));
+  if (!loader) {
+    return null;
+  }
+
+  const skillInfo = loader.listSkills(false).find((skill) => skill.name === skillName);
+  if (!skillInfo) {
+    return null;
+  }
+
+  try {
+    const raw = await readFile(skillInfo.path, "utf-8");
+    return {
+      raw,
+      source: skillInfo.source
+    };
+  } catch {
+    return null;
+  }
+}
+
+function parseGitSkillSpec(rawSpec: string): { owner: string; repo: string; skillPath: string } | null {
+  const spec = rawSpec.trim();
+  if (!spec) {
+    return null;
+  }
+
+  const segments = spec.split("/").filter(Boolean);
+  if (segments.length < 3) {
+    return null;
+  }
+
+  return {
+    owner: segments[0] ?? "",
+    repo: segments[1] ?? "",
+    skillPath: segments.slice(2).join("/")
+  };
+}
+
+async function fetchTextWithFallback(urls: string[]): Promise<{ text: string; url: string } | null> {
+  for (const url of urls) {
+    try {
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "text/plain, text/markdown, application/json"
+        }
+      });
+      if (!response.ok) {
+        continue;
+      }
+      const text = await response.text();
+      if (text.trim().length === 0) {
+        continue;
+      }
+      return { text, url };
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
+async function loadGitSkillMarkdownFromSpec(rawSpec: string): Promise<{ raw: string; sourceUrl: string } | null> {
+  const parsed = parseGitSkillSpec(rawSpec);
+  if (!parsed) {
+    return null;
+  }
+
+  const candidates = [
+    `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/main/${parsed.skillPath}/SKILL.md`,
+    `https://raw.githubusercontent.com/${parsed.owner}/${parsed.repo}/master/${parsed.skillPath}/SKILL.md`
+  ];
+  const result = await fetchTextWithFallback(candidates);
+  if (!result) {
+    return null;
+  }
+
+  return {
+    raw: result.text,
+    sourceUrl: result.url
+  };
+}
+
+async function loadPluginReadmeFromNpm(spec: string): Promise<{ readme: string; sourceUrl: string; metadataRaw?: string } | null> {
+  const encodedSpec = encodeURIComponent(spec);
+  const registryUrl = `https://registry.npmjs.org/${encodedSpec}`;
+  try {
+    const response = await fetch(registryUrl, {
+      headers: {
+        Accept: "application/json"
+      }
+    });
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as Record<string, unknown>;
+    const readme = typeof payload.readme === "string" ? payload.readme : "";
+    const latest = isRecord(payload["dist-tags"]) && typeof payload["dist-tags"].latest === "string"
+      ? payload["dist-tags"].latest
+      : undefined;
+    const metadata = {
+      name: typeof payload.name === "string" ? payload.name : spec,
+      version: latest,
+      description: typeof payload.description === "string" ? payload.description : undefined,
+      homepage: typeof payload.homepage === "string" ? payload.homepage : undefined
+    };
+
+    if (readme.trim().length === 0) {
+      return null;
+    }
+
+    return {
+      readme,
+      sourceUrl: registryUrl,
+      metadataRaw: JSON.stringify(metadata, null, 2)
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function buildSkillContentView(options: UiRouterOptions, item: MarketplaceItemView): Promise<MarketplaceSkillContentView | null> {
+  const local = await loadLocalSkillMarkdown(options, item.install.spec);
+  if (local) {
+    const split = splitMarkdownFrontmatter(local.raw);
+    return {
+      type: "skill",
+      slug: item.slug,
+      name: item.name,
+      install: item.install,
+      source: local.source,
+      raw: local.raw,
+      metadataRaw: split.metadataRaw,
+      bodyRaw: split.bodyRaw
+    };
+  }
+
+  if (item.install.kind === "git") {
+    const remote = await loadGitSkillMarkdownFromSpec(item.install.spec);
+    if (remote) {
+      const split = splitMarkdownFrontmatter(remote.raw);
+      return {
+        type: "skill",
+        slug: item.slug,
+        name: item.name,
+        install: item.install,
+        source: "git",
+        raw: remote.raw,
+        metadataRaw: split.metadataRaw,
+        bodyRaw: split.bodyRaw,
+        sourceUrl: remote.sourceUrl
+      };
+    }
+  }
+
+  return null;
+}
+
+async function buildPluginContentView(item: MarketplaceItemView): Promise<MarketplacePluginContentView> {
+  if (item.install.kind === "npm") {
+    const npm = await loadPluginReadmeFromNpm(item.install.spec);
+    if (npm) {
+      return {
+        type: "plugin",
+        slug: item.slug,
+        name: item.name,
+        install: item.install,
+        source: "npm",
+        raw: npm.readme,
+        bodyRaw: npm.readme,
+        metadataRaw: npm.metadataRaw,
+        sourceUrl: npm.sourceUrl
+      };
+    }
+  }
+
+  return {
+    type: "plugin",
+    slug: item.slug,
+    name: item.name,
+    install: item.install,
+    source: "remote",
+    bodyRaw: item.description || item.summary || "",
+    metadataRaw: JSON.stringify({
+      name: item.name,
+      author: item.author,
+      sourceRepo: item.sourceRepo,
+      homepage: item.homepage
+    }, null, 2)
+  };
 }
 
 async function fetchAllMarketplaceItems(params: {
@@ -942,7 +1305,7 @@ function registerPluginMarketplaceRoutes(app: Hono, options: UiRouterOptions, ma
     }
 
     const filteredItems = result.data.items
-      .map((item) => sanitizeMarketplaceItem(item))
+      .map((item) => normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(item)))
       .filter((item) => isSupportedMarketplacePluginItem(item));
 
     const pageSize = Math.min(100, toPositiveInt(query.pageSize, 20));
@@ -972,12 +1335,32 @@ function registerPluginMarketplaceRoutes(app: Hono, options: UiRouterOptions, ma
       return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
     }
 
-    const sanitized = sanitizeMarketplaceItem(result.data);
+    const sanitized = normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(result.data));
     if (!isSupportedMarketplacePluginItem(sanitized)) {
       return c.json(err("NOT_FOUND", "marketplace item not supported by nextclaw"), 404);
     }
 
     return c.json(ok(sanitized));
+  });
+
+  app.get("/api/marketplace/plugins/items/:slug/content", async (c) => {
+    const slug = encodeURIComponent(c.req.param("slug"));
+    const result = await fetchMarketplaceData<MarketplaceItemView>({
+      baseUrl: marketplaceBaseUrl,
+      path: `/api/v1/plugins/items/${slug}`
+    });
+
+    if (!result.ok) {
+      return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
+    }
+
+    const sanitized = normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(result.data));
+    if (!isSupportedMarketplacePluginItem(sanitized)) {
+      return c.json(err("NOT_FOUND", "marketplace item not supported by nextclaw"), 404);
+    }
+
+    const content = await buildPluginContentView(sanitized);
+    return c.json(ok(content));
   });
 
   app.post("/api/marketplace/plugins/install", async (c) => {
@@ -1050,7 +1433,7 @@ function registerPluginMarketplaceRoutes(app: Hono, options: UiRouterOptions, ma
     }
 
     const filteredItems = result.data.items
-      .map((item) => sanitizeMarketplaceItem(item))
+      .map((item) => normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(item)))
       .filter((item) => isSupportedMarketplacePluginItem(item));
 
     return c.json(ok({
@@ -1085,7 +1468,7 @@ function registerSkillMarketplaceRoutes(app: Hono, options: UiRouterOptions, mar
 
     const knownSkillNames = collectKnownSkillNames(options);
     const filteredItems = result.data.items
-      .map((item) => sanitizeMarketplaceItem(item))
+      .map((item) => normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(item)))
       .filter((item) => isSupportedMarketplaceSkillItem(item, knownSkillNames));
 
     const pageSize = Math.min(100, toPositiveInt(query.pageSize, 20));
@@ -1116,12 +1499,37 @@ function registerSkillMarketplaceRoutes(app: Hono, options: UiRouterOptions, mar
     }
 
     const knownSkillNames = collectKnownSkillNames(options);
-    const sanitized = sanitizeMarketplaceItem(result.data);
+    const sanitized = normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(result.data));
     if (!isSupportedMarketplaceSkillItem(sanitized, knownSkillNames)) {
       return c.json(err("NOT_FOUND", "marketplace item not supported by nextclaw"), 404);
     }
 
     return c.json(ok(sanitized));
+  });
+
+  app.get("/api/marketplace/skills/items/:slug/content", async (c) => {
+    const slug = encodeURIComponent(c.req.param("slug"));
+    const result = await fetchMarketplaceData<MarketplaceItemView>({
+      baseUrl: marketplaceBaseUrl,
+      path: `/api/v1/skills/items/${slug}`
+    });
+
+    if (!result.ok) {
+      return c.json(err("MARKETPLACE_UNAVAILABLE", result.message), result.status as 500);
+    }
+
+    const knownSkillNames = collectKnownSkillNames(options);
+    const sanitized = normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(result.data));
+    if (!isSupportedMarketplaceSkillItem(sanitized, knownSkillNames)) {
+      return c.json(err("NOT_FOUND", "marketplace item not supported by nextclaw"), 404);
+    }
+
+    const content = await buildSkillContentView(options, sanitized);
+    if (!content) {
+      return c.json(err("NOT_FOUND", "skill markdown content not found"), 404);
+    }
+
+    return c.json(ok(content));
   });
 
   app.post("/api/marketplace/skills/install", async (c) => {
@@ -1195,7 +1603,7 @@ function registerSkillMarketplaceRoutes(app: Hono, options: UiRouterOptions, mar
 
     const knownSkillNames = collectKnownSkillNames(options);
     const filteredItems = result.data.items
-      .map((item) => sanitizeMarketplaceItem(item))
+      .map((item) => normalizeMarketplaceItemForUi(sanitizeMarketplaceItem(item)))
       .filter((item) => isSupportedMarketplaceSkillItem(item, knownSkillNames));
 
     return c.json(ok({
