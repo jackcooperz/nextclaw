@@ -1,51 +1,24 @@
+<p align="right">
+  <a href="./README.zh-CN.md">简体中文</a>
+</p>
+
 <div align="center">
+
+<img src="images/marketing/nextclaw-omni-assistant-en.jpg" alt="NextClaw — The Self-Aware Infrastructure for the AI Agent Era" width="720" />
+
+<br /><br />
 
 # NextClaw
 
-**Your omnipotent personal assistant, residing above the digital realm**
+**Your omnipotent personal AI assistant. One command. Runs locally.**
 
 [![npm](https://img.shields.io/npm/v/nextclaw)](https://www.npmjs.com/package/nextclaw)
-[![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](https://nodejs.org)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
-[![LOC](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Flatest.json&query=%24.totals.codeLines&label=LOC&suffix=%20lines&color=7A4DFF)](https://docs.nextclaw.io/en/)
-[![OpenClaw LOC](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Fcomparison.json&query=%24.benchmark.totals.codeLines&label=OpenClaw%20LOC&suffix=%20lines&color=6B7280)](https://docs.nextclaw.io/en/)
-[![NextClaw vs OpenClaw](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2FPeiiii%2Fnextclaw%2Fmaster%2Fdocs%2Fmetrics%2Fcode-volume%2Fcomparison.json&query=%24.comparison.basePercentOfBenchmark&label=NextClaw%20vs%20OpenClaw&suffix=%25&color=0EA5E9)](https://docs.nextclaw.io/en/)
+[![Node](https://img.shields.io/badge/node-%3E%3D18-blue)](https://nodejs.org)
+[![Discord](https://img.shields.io/badge/Discord-NextClaw-5865F2?logo=discord&logoColor=white)](https://discord.gg/j4Skbgye)
 
-[English](README.md) | [简体中文](README.zh-CN.md)
+[Documentation](https://docs.nextclaw.io/en/) · [Discord](https://discord.gg/j4Skbgye) · [Issues](https://github.com/Peiiii/nextclaw/issues) · [Roadmap](https://docs.nextclaw.io/en/guide/roadmap)
 
-[Why NextClaw?](#why-nextclaw) · [Quick Start](#-quick-start) · [Features](#-features) · [Architecture](#-architecture) · [Screenshots](#-screenshots) · [Commands](#-commands) · [Channels](#-channels) · [Community](#-community) · [Docs](https://docs.nextclaw.io/en/)
-
-### 12+ AI Providers
-<p>
-  <img src="https://img.shields.io/badge/OpenRouter-6366F1?style=flat-square" alt="OpenRouter" />
-  <img src="https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white" alt="OpenAI" />
-  <img src="https://img.shields.io/badge/Anthropic-D4A27F?style=flat-square&logo=anthropic&logoColor=white" alt="Anthropic" />
-  <img src="https://img.shields.io/badge/Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white" alt="Gemini" />
-  <img src="https://img.shields.io/badge/DeepSeek-0066FF?style=flat-square" alt="DeepSeek" />
-  <img src="https://img.shields.io/badge/Groq-F55036?style=flat-square" alt="Groq" />
-  <img src="https://img.shields.io/badge/MiniMax-FF6B35?style=flat-square" alt="MiniMax" />
-  <img src="https://img.shields.io/badge/Moonshot-1A1A2E?style=flat-square" alt="Moonshot" />
-  <img src="https://img.shields.io/badge/DashScope-FF6A00?style=flat-square" alt="DashScope" />
-  <img src="https://img.shields.io/badge/Zhipu-0052CC?style=flat-square" alt="Zhipu" />
-  <img src="https://img.shields.io/badge/AiHubMix-00B4D8?style=flat-square" alt="AiHubMix" />
-  <img src="https://img.shields.io/badge/vLLM-FF4500?style=flat-square" alt="vLLM" />
-</p>
-
-### 10+ Message Channels
-<p>
-  <img src="https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" />
-  <img src="https://img.shields.io/badge/Telegram-26A5E4?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" />
-  <img src="https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white" alt="Slack" />
-  <img src="https://img.shields.io/badge/WhatsApp-25D366?style=flat-square&logo=whatsapp&logoColor=white" alt="WhatsApp" />
-  <img src="https://img.shields.io/badge/Feishu-00D6B9?style=flat-square" alt="Feishu" />
-  <img src="https://img.shields.io/badge/DingTalk-0089FF?style=flat-square" alt="DingTalk" />
-  <img src="https://img.shields.io/badge/WeCom-07C160?style=flat-square" alt="WeCom" />
-  <img src="https://img.shields.io/badge/QQ-EB1923?style=flat-square&logo=tencentqq&logoColor=white" alt="QQ" />
-  <img src="https://img.shields.io/badge/Email-EA4335?style=flat-square&logo=gmail&logoColor=white" alt="Email" />
-  <img src="https://img.shields.io/badge/Mochat-6B7280?style=flat-square" alt="Mochat" />
-</p>
-
-### Deploy Anywhere
 <p>
   <img src="https://img.shields.io/badge/Windows-0078D6?style=flat-square&logo=windows&logoColor=white" alt="Windows" />
   <img src="https://img.shields.io/badge/macOS-000000?style=flat-square&logo=apple&logoColor=white" alt="macOS" />
@@ -58,220 +31,73 @@
 
 ---
 
-**NextClaw** is your omnipotent personal assistant, residing above the digital realm. It orchestrates the entire internet and raw compute, bending every bit and byte to manifest your intent into reality. Runs entirely on your machine.
+NextClaw orchestrates the entire internet and raw compute from your machine — bending every bit and byte to manifest your intent into reality. Inspired by [OpenClaw](https://github.com/openclaw/openclaw) and fully compatible with its plugin ecosystem.
 
-Inspired by [OpenClaw](https://github.com/openclaw/openclaw) & [nanobot](https://github.com/HKUDS/nanobot), it stays OpenClaw-compatible. Install once, run `nextclaw start`, then configure providers and channels in the browser. No onboarding wizard, no daemon setup — just one command and you're in.
+- **One-command startup** — `nextclaw start`, then configure everything in the browser UI
+- **12+ AI providers** — OpenRouter, OpenAI, Anthropic, Gemini, DeepSeek, Groq, MiniMax, and more
+  <br /><img src="https://img.shields.io/badge/OpenRouter-6366F1?style=flat-square" alt="OpenRouter" /> <img src="https://img.shields.io/badge/OpenAI-412991?style=flat-square&logo=openai&logoColor=white" alt="OpenAI" /> <img src="https://img.shields.io/badge/Anthropic-D4A27F?style=flat-square&logo=anthropic&logoColor=white" alt="Anthropic" /> <img src="https://img.shields.io/badge/Gemini-8E75B2?style=flat-square&logo=googlegemini&logoColor=white" alt="Gemini" /> <img src="https://img.shields.io/badge/DeepSeek-0066FF?style=flat-square" alt="DeepSeek" /> <img src="https://img.shields.io/badge/Groq-F55036?style=flat-square" alt="Groq" /> <img src="https://img.shields.io/badge/MiniMax-FF6B35?style=flat-square" alt="MiniMax" /> <img src="https://img.shields.io/badge/Moonshot-1A1A2E?style=flat-square" alt="Moonshot" /> <img src="https://img.shields.io/badge/DashScope-FF6A00?style=flat-square" alt="DashScope" /> <img src="https://img.shields.io/badge/Zhipu-0052CC?style=flat-square" alt="Zhipu" /> <img src="https://img.shields.io/badge/AiHubMix-00B4D8?style=flat-square" alt="AiHubMix" /> <img src="https://img.shields.io/badge/vLLM-FF4500?style=flat-square" alt="vLLM" />
+- **10+ message channels** — Discord, Telegram, Slack, WhatsApp, Feishu, DingTalk, WeCom, QQ, Email
+  <br /><img src="https://img.shields.io/badge/Discord-5865F2?style=flat-square&logo=discord&logoColor=white" alt="Discord" /> <img src="https://img.shields.io/badge/Telegram-26A5E4?style=flat-square&logo=telegram&logoColor=white" alt="Telegram" /> <img src="https://img.shields.io/badge/Slack-4A154B?style=flat-square&logo=slack&logoColor=white" alt="Slack" /> <img src="https://img.shields.io/badge/WhatsApp-25D366?style=flat-square&logo=whatsapp&logoColor=white" alt="WhatsApp" /> <img src="https://img.shields.io/badge/Feishu-00D6B9?style=flat-square" alt="Feishu" /> <img src="https://img.shields.io/badge/DingTalk-0089FF?style=flat-square" alt="DingTalk" /> <img src="https://img.shields.io/badge/WeCom-07C160?style=flat-square" alt="WeCom" /> <img src="https://img.shields.io/badge/QQ-EB1923?style=flat-square&logo=tencentqq&logoColor=white" alt="QQ" /> <img src="https://img.shields.io/badge/Email-EA4335?style=flat-square&logo=gmail&logoColor=white" alt="Email" /> <img src="https://img.shields.io/badge/Mochat-6B7280?style=flat-square" alt="Mochat" />
+- **Built-in automation** — Cron & Heartbeat for scheduled autonomous tasks
+- **Local & private** — Runs entirely on your machine; configs, history, and tokens stay with you
+- **Ultra-lightweight** — ~1/20 the codebase of OpenClaw, easier to maintain and extend
 
-Most OpenClaw alternatives are better suited for learning or secondary development; in experience and ecosystem they can't match OpenClaw. NextClaw aims for **better usability** and **OpenClaw ecosystem compatibility** ([nextclaw.io](https://nextclaw.io)). Reasons to try it:
-
-- **One command, UI-first config**: Minimal install, no complex CLI, beginner-friendly
-- **Friendly to more regions**: Built-in QQ, Feishu, and other channels
-- **OpenClaw ecosystem compatible**: Same plugin and config patterns, reuse existing ecosystem
-- **Polished UI and i18n**: Ready-to-use interface with Chinese and other languages
-- **Deploy anywhere**: Common OSes, cloud VMs, and Docker
-- **Open source, lightweight**: Codebase ~1/20 the size of OpenClaw, easier to maintain and extend
-- **More modular architecture**: Better maintainability and iteration speed
-
-**Best for:** quick trials, secondary machines, or anyone who wants multi-channel + multi-provider with low maintenance overhead.
-
-### Why NextClaw?
-
-| Advantage | Description |
-|-----------|-------------|
-| **Feature-rich** | Multi-provider, multi-channel, cron/heartbeat, web search, exec, memory, subagents — same capabilities as OpenClaw where it matters. |
-| **OpenClaw compatible** | Uses OpenClaw plugin SDK and channel plugin format; built-in channel plugins (Telegram, Discord, WhatsApp, etc.) are OpenClaw-style and configurable the same way. |
-| **Easier to use** | No complex CLI workflows — one command (`nextclaw start`), then configure and chat in the built-in UI. |
-| **Maintainable by design** | Keep runtime capabilities focused on built-ins, reducing hidden coupling and long-term maintenance cost. |
-| **Ultra-lightweight** | Evolved from [nanobot](https://github.com/HKUDS/nanobot); minimal codebase, fast to run and maintain. |
-
----
-
-## ✨ Features
-
-| Feature | Description |
-|---------|-------------|
-| **OpenClaw compatible** | Same plugin SDK and channel plugin format; use OpenClaw-style plugins and config. |
-| **One-command start** | `nextclaw start` — background gateway + config UI, no extra steps |
-| **Built-in chat + config UI** | Chat with agent (real streaming output, Markdown rendering, tool trace cards, grouped messages), then tune models/providers/channels in one place; config in `~/.nextclaw/config.json` |
-| **Secrets support** | OpenClaw-style secret refs (`env` / `file` / `exec`) via `secrets.refs`, without storing plaintext keys in config |
-| **Multi-provider** | OpenRouter, OpenAI, MiniMax, Moonshot, Gemini, DeepSeek, DashScope, Zhipu, Groq, vLLM, and more (OpenAI-compatible) |
-| **Multi-channel** | Telegram, Discord, WhatsApp, Feishu, DingTalk, WeCom, Slack, Email, QQ, Mochat — enable and configure from the UI |
-| **Automation** | Cron + Heartbeat for scheduled tasks |
-| **Local tools** | Web search, command execution, memory, subagents |
-
----
-
-## 🏗 Architecture
-
-NextClaw is a **pnpm monorepo**. When you run `nextclaw start`, one process runs both the **gateway** (channels + agent loop) and the **UI server** (API + static frontend).
-
-| Layer | Package | Role |
-|-------|---------|------|
-| **CLI** | `nextclaw` | User entry: `start` / `serve` / `gateway` / `ui` / `stop`; loads config and starts gateway + UI server. |
-| **Core** | `@nextclaw/core` | Agent loop, multi-provider routing, config load/reload, cron/heartbeat, session, channel plugin API, skills, tools. |
-| **Channels** | `@nextclaw/channel-runtime` | Built-in channel implementations (Telegram, Discord, Feishu, Slack, etc.). |
-| **Compat** | `@nextclaw/openclaw-compat` | OpenClaw-style plugin loader: install/load channel and provider plugins from config. |
-| **Server** | `@nextclaw/server` | Hono HTTP + WebSocket; serves `@nextclaw/ui` build and REST API (config, channels, providers, cron, marketplace proxy). |
-| **UI** | `@nextclaw/ui` | React SPA: chat, config, providers, channels, plugins, skills, marketplace. |
-| **Worker** | `workers/marketplace-api` | Cloudflare Worker: catalog API for marketplace; UI talks to it via NextClaw server proxy. |
-
-Config lives in `~/.nextclaw/config.json`; gateway and server both use it (with hot reload). Message flow: channel → gateway (core + channel-runtime) → provider (e.g. OpenRouter) → reply back to channel.
-
----
-
-## 👥 Community
-
-- **QQ Group** (群号 1084340143) — Scan QR to join:
-
-  <img src="images/contact/nextclaw-contact-qq-group.jpg" width="200" alt="QQ Group QR" />
-
-- **Discord**: [NextClaw/OpenClaw](https://discord.gg/j4Skbgye)
-
----
-
-## 🚀 Quick Start
+## Quick Start
 
 ```bash
 npm i -g nextclaw
 nextclaw start
 ```
 
-Open **http://127.0.0.1:18791** → set your provider (e.g. OpenRouter) and model, then go to **Chat** tab to talk with your agent.
-
-NextClaw now binds UI on `0.0.0.0` by default for `start/restart/serve/ui/gateway` UI mode; startup logs print detected public URLs.
+Open **http://127.0.0.1:18791** → set your provider and model → start chatting.
 
 ```bash
-nextclaw stop   # stop the service
+nextclaw stop    # stop the service
 ```
 
----
+> Full configuration guide: [docs.nextclaw.io](https://docs.nextclaw.io/en/guide/configuration)
 
-## 📸 Screenshots
+## Screenshots
 
-**Config UI** — providers, models, and defaults in one screen:
+**AI Providers** — configure and switch between providers in the UI:
 
-![Config UI](https://github.com/Peiiii/nextclaw/raw/master/images/screenshots/nextclaw-ui-screenshot.png)
+![AI Providers](images/screenshots/nextclaw-providers-page-en.png)
 
-**AI Providers** — configure OpenRouter, OpenAI, MiniMax, DashScope, and more; view configured vs all providers:
+**Message Channels** — enable Discord, Telegram, Feishu, QQ, and more:
 
-![AI Providers](https://github.com/Peiiii/nextclaw/raw/master/images/screenshots/nextclaw-providers-page.png)
+![Message Channels](images/screenshots/nextclaw-channels-page-en.png)
 
-**Message Channels** — enable and configure Discord, Feishu, QQ, and more:
+**Micro Browser** — built-in browser for web interaction:
 
-![Message Channels](https://github.com/Peiiii/nextclaw/raw/master/images/screenshots/nextclaw-channels-page.png)
+![Micro Browser](images/screenshots/nextclaw-micro-browser-dock-en.png)
 
-**Cron Jobs** — view and manage scheduled tasks, run now, enable/disable, track last run:
+## Documentation
 
-<img src="https://github.com/Peiiii/nextclaw/raw/master/images/screenshots/nextclaw-cron-job-page.png" width="960" alt="Cron Jobs" />
+Visit **[docs.nextclaw.io](https://docs.nextclaw.io/en/)** for the full documentation, including:
 
-**Plugins** — install and manage channel and provider plugins from the catalog:
-
-![Plugins](https://github.com/Peiiii/nextclaw/raw/master/images/screenshots/nextclaw-plugins-page.png)
-
-**Skills** — enable and configure skills (web search, exec, memory, subagents, etc.):
-
-![Skills](https://github.com/Peiiii/nextclaw/raw/master/images/screenshots/nextclaw-skills-page.png)
-
----
-
-## 🔌 Provider examples
-
-<details>
-<summary>OpenRouter (recommended)</summary>
-
-```json
-{
-  "providers": { "openrouter": { "apiKey": "sk-or-v1-xxx" } },
-  "agents": { "defaults": { "model": "minimax/MiniMax-M2.5" } }
-}
-```
-
-</details>
-
-<details>
-<summary>MiniMax (Mainland China)</summary>
-
-```json
-{
-  "providers": {
-    "minimax": { "apiKey": "sk-api-xxx", "apiBase": "https://api.minimaxi.com/v1" }
-  },
-  "agents": { "defaults": { "model": "minimax/MiniMax-M2.5" } }
-}
-```
-
-</details>
-
-<details>
-<summary>Local vLLM</summary>
-
-```json
-{
-  "providers": {
-    "vllm": { "apiKey": "dummy", "apiBase": "http://localhost:8000/v1" }
-  },
-  "agents": { "defaults": { "model": "meta-llama/Llama-3.1-8B-Instruct" } }
-}
-```
-
-</details>
-
----
-
-## 📋 Commands
-
-| Command | Description |
-|---------|-------------|
-| `nextclaw start` | Start background service (gateway + UI, public by default) |
-| `nextclaw restart` | Restart background service without manual stop/start |
-| `nextclaw stop` | Stop background service |
-| `nextclaw ui` | Start UI backend + gateway (foreground) |
-| `nextclaw gateway` | Start gateway only (for channels) |
-| `nextclaw agent -m "hello"` | Chat in CLI |
-| `nextclaw status` | Show runtime process/health/config status (`--json`, `--verbose`, `--fix`) |
-| `nextclaw update` | Self-update the CLI |
-| `nextclaw channels status` | Show enabled channels |
-| `nextclaw doctor` | Run runtime diagnostics (health, state coherence, port checks) |
-| `nextclaw channels login` | QR login for supported channels |
-| `nextclaw config get <path>` | Get config value by path (`--json` for structured output) |
-| `nextclaw config set <path> <value>` | Set config value by path (`--json` to parse value as JSON) |
-| `nextclaw config unset <path>` | Remove config value by path |
-
----
-
-## 💬 Channels
-
-| Channel | Setup |
-|---------|-------|
-| Telegram | Easy (bot token) |
-| Discord | Easy (bot token + intents) |
-| WhatsApp | Medium (QR login) |
-| Feishu | Medium (app credentials) |
-| Mochat | Medium (claw token + websocket) |
-| DingTalk | Medium (app credentials) |
-| WeCom | Medium (corp app + callback endpoint) |
-| Slack | Medium (bot + app tokens) |
-| Email | Medium (IMAP/SMTP) |
-| QQ | Easy (app credentials) |
-
----
-
-## 📚 Docs
-
+- [Configuration & Providers](https://docs.nextclaw.io/en/guide/configuration)
+- [Multi-Agent Architecture](https://docs.nextclaw.io/en/guide/multi-agent)
 - [Roadmap](https://docs.nextclaw.io/en/guide/roadmap)
-- [Configuration, providers, channels, cron](https://docs.nextclaw.io/en/guide/configuration)
-- [Multi-agent architecture: single Gateway, bindings, session isolation](https://docs.nextclaw.io/en/guide/multi-agent)
-- [RFC: Action Schema v1](https://docs.nextclaw.io/en/)
-- [Code volume monitoring workflow](https://docs.nextclaw.io/en/)
-- [Marketplace Worker deploy workflow](https://docs.nextclaw.io/en/)
-- [Marketplace read-only Worker API](https://github.com/Peiiii/nextclaw/blob/master/workers/marketplace-api/README.md)
+
+## Community
+
+- **Discord** — [NextClaw / OpenClaw](https://discord.gg/j4Skbgye)
+- **QQ Group** (1084340143) — Scan to join:
+
+  <img src="images/contact/nextclaw-contact-qq-group.jpg" width="180" alt="QQ Group QR" />
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+## License
+
+[MIT](LICENSE)
 
 ---
 
 <div align="center">
 
 [![Star History Chart](https://api.star-history.com/svg?repos=Peiiii/nextclaw&type=Date)](https://star-history.com/#Peiiii/nextclaw&Date)
-
-**License** [MIT](LICENSE)
 
 </div>
