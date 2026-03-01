@@ -184,6 +184,9 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   providersTabAll: { zh: '全部提供商', en: 'All Providers' },
   providersFilterPlaceholder: { zh: '搜索提供商', en: 'Search providers' },
   providersNoMatch: { zh: '没有匹配的提供商', en: 'No matching providers' },
+  providerAddCustom: { zh: '新增自定义提供商', en: 'Add Custom Provider' },
+  providerDelete: { zh: '删除该提供商', en: 'Delete Provider' },
+  providerDeleteConfirm: { zh: '确认删除这个自定义提供商吗？删除后不可恢复。', en: 'Delete this custom provider? This action cannot be undone.' },
   providersSelectPlaceholder: { zh: '选择提供商', en: 'Select Provider' },
   providersSelectTitle: { zh: '选择左侧提供商开始配置', en: 'Select a provider from the left to configure' },
   providersSelectDescription: { zh: '你可以连续切换多个提供商并逐个保存配置。', en: 'Switch between providers continuously and save each configuration.' },
@@ -202,11 +205,21 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   showKey: { zh: '显示密钥', en: 'Show Key' },
   hideKey: { zh: '隐藏密钥', en: 'Hide Key' },
   providerFormDescription: { zh: '配置 AI 提供商的 API 密钥与参数', en: 'Configure API keys and parameters for AI provider' },
+  providerDisplayName: { zh: '自定义名称', en: 'Custom Name' },
+  providerDisplayNamePlaceholder: { zh: '例如：中转站 A', en: 'For example: Relay A' },
+  providerDisplayNameHelp: {
+    zh: '仅用于界面展示，便于区分多个自定义 Provider。',
+    en: 'Display-only label to distinguish multiple custom providers.'
+  },
   enterApiKey: { zh: '请输入 API 密钥', en: 'Enter API Key' },
   providerApiBaseHelp: { zh: '留空或恢复默认即可使用预置 API Base。', en: 'Leave empty or reset to use the default API base.' },
   providerApiBaseHelpMinimax: {
     zh: 'MiniMax 中国区请使用 https://api.minimaxi.com/v1；海外请使用 https://api.minimax.io/v1。',
     en: 'Use https://api.minimaxi.com/v1 for Mainland China accounts, and https://api.minimax.io/v1 for overseas accounts.'
+  },
+  providerOpenAICompatHint: {
+    zh: '自定义提供商默认按 OpenAI 兼容 API 格式接入（Chat Completions / Responses）。',
+    en: 'Custom providers use OpenAI-compatible API format by default (Chat Completions / Responses).'
   },
   providerExtraHeadersHelp: { zh: '用于自定义请求头（可选）。', en: 'Optional custom request headers.' },
   providerTestConnection: { zh: '测试连接', en: 'Test Connection' },

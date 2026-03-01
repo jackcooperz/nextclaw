@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useConfig, useConfigMeta, useConfigSchema } from '@/hooks/useConfig';
-import { Search, KeyRound } from 'lucide-react';
+import { useConfig, useConfigMeta, useConfigSchema, useCreateProvider } from '@/hooks/useConfig';
+import { Search, KeyRound, Plus } from 'lucide-react';
 import { ProviderForm } from './ProviderForm';
 import { cn } from '@/lib/utils';
 import { Tabs } from '@/components/ui/tabs-custom';
@@ -11,6 +11,7 @@ import { StatusDot } from '@/components/ui/status-dot';
 import { t } from '@/lib/i18n';
 import { PageLayout, PageHeader } from '@/components/layout/page-layout';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
 import { CONFIG_SIDEBAR_CARD_CLASS, CONFIG_SPLIT_GRID_CLASS } from './config-layout';
 
 function formatBasePreview(base?: string | null): string | null {
@@ -30,6 +31,7 @@ export function ProvidersList() {
   const { data: config } = useConfig();
   const { data: meta } = useConfigMeta();
   const { data: schema } = useConfigSchema();
+  const createProvider = useCreateProvider();
 
   const [activeTab, setActiveTab] = useState('installed');
   const [selectedProvider, setSelectedProvider] = useState<string | undefined>();
@@ -60,7 +62,8 @@ export function ProvidersList() {
         if (!keyword) {
           return true;
         }
-        const display = (provider.displayName || provider.name).toLowerCase();
+        const configDisplayName = baseConfig[provider.name]?.displayName?.trim();
+        const display = (configDisplayName || provider.displayName || provider.name).toLowerCase();
         return display.includes(keyword) || provider.name.toLowerCase().includes(keyword);
       });
   }, [meta, config, activeTab, query]);
@@ -79,6 +82,17 @@ export function ProvidersList() {
 
   const selectedName = selectedProvider;
 
+  const handleCreateCustomProvider = async () => {
+    try {
+      const result = await createProvider.mutateAsync({ data: {} });
+      setActiveTab('all');
+      setQuery('');
+      setSelectedProvider(result.name);
+    } catch {
+      // toast handled in hook
+    }
+  };
+
   if (!config || !meta) {
     return <div className="p-8">{t('providersLoading')}</div>;
   }
@@ -89,8 +103,18 @@ export function ProvidersList() {
 
       <div className={CONFIG_SPLIT_GRID_CLASS}>
         <section className={CONFIG_SIDEBAR_CARD_CLASS}>
-          <div className="border-b border-gray-100 px-4 pt-4">
+          <div className="border-b border-gray-100 px-4 pt-4 pb-3 space-y-3">
             <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} className="mb-0" />
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full justify-center"
+              onClick={handleCreateCustomProvider}
+              disabled={createProvider.isPending}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {createProvider.isPending ? t('saving') : t('providerAddCustom')}
+            </Button>
           </div>
 
           <div className="border-b border-gray-100 px-4 py-3">
@@ -110,6 +134,7 @@ export function ProvidersList() {
               const providerConfig = config.providers[provider.name];
               const isReady = Boolean(providerConfig?.apiKeySet);
               const isActive = selectedName === provider.name;
+              const providerLabel = providerConfig?.displayName?.trim() || provider.displayName || provider.name;
               const providerHint = hintForPath(`providers.${provider.name}`, uiHints);
               const resolvedBase = providerConfig?.apiBase || provider.defaultApiBase || '';
               const basePreview = formatBasePreview(resolvedBase);
@@ -140,7 +165,7 @@ export function ProvidersList() {
                         fallback={<span className="text-sm font-semibold uppercase text-gray-500">{provider.name[0]}</span>}
                       />
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900">{provider.displayName || provider.name}</p>
+                        <p className="truncate text-sm font-semibold text-gray-900">{providerLabel}</p>
                         <p className="line-clamp-1 text-[11px] text-gray-500">{description}</p>
                       </div>
                     </div>
@@ -165,7 +190,14 @@ export function ProvidersList() {
           </div>
         </section>
 
-        <ProviderForm providerName={selectedName} />
+        <ProviderForm
+          providerName={selectedName}
+          onProviderDeleted={(deletedProvider) => {
+            if (deletedProvider === selectedProvider) {
+              setSelectedProvider(undefined);
+            }
+          }}
+        />
       </div>
     </PageLayout>
   );

@@ -1,5 +1,14 @@
 # nextclaw-server
 
+## 0.5.27
+
+### Patch Changes
+
+- support dynamic custom providers with add/edit/delete workflow, ensure custom provider test model selection is provider-scoped, and strip only the provider routing prefix before upstream OpenAI-compatible API calls.
+- Updated dependencies
+  - @nextclaw/core@0.6.43
+  - @nextclaw/openclaw-compat@0.1.32
+
 ## 0.5.26
 
 ### Patch Changes

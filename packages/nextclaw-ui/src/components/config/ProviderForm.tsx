@@ -1,5 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useConfig, useConfigMeta, useConfigSchema, useTestProviderConnection, useUpdateProvider } from '@/hooks/useConfig';
+import {
+  useConfig,
+  useConfigMeta,
+  useConfigSchema,
+  useDeleteProvider,
+  useTestProviderConnection,
+  useUpdateProvider
+} from '@/hooks/useConfig';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -10,7 +17,7 @@ import { StatusDot } from '@/components/ui/status-dot';
 import { t } from '@/lib/i18n';
 import { hintForPath } from '@/lib/config-hints';
 import type { ProviderConfigUpdate, ProviderConnectionTestRequest } from '@/api/types';
-import { KeyRound, Globe, Hash, RotateCcw, CircleDotDashed, Sparkles, Plus, X } from 'lucide-react';
+import { KeyRound, Globe, Hash, RotateCcw, CircleDotDashed, Sparkles, Plus, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { CONFIG_DETAIL_CARD_CLASS, CONFIG_EMPTY_DETAIL_CARD_CLASS } from './config-layout';
 
@@ -18,6 +25,7 @@ type WireApiType = 'auto' | 'chat' | 'responses';
 
 type ProviderFormProps = {
   providerName?: string;
+  onProviderDeleted?: (providerName: string) => void;
 };
 
 function normalizeHeaders(input: Record<string, string> | null | undefined): Record<string, string> | null {
@@ -129,11 +137,12 @@ function serializeModelsForSave(models: string[], defaultModels: string[]): stri
   return models;
 }
 
-export function ProviderForm({ providerName }: ProviderFormProps) {
+export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormProps) {
   const { data: config } = useConfig();
   const { data: meta } = useConfigMeta();
   const { data: schema } = useConfigSchema();
   const updateProvider = useUpdateProvider();
+  const deleteProvider = useDeleteProvider();
   const testProviderConnection = useTestProviderConnection();
 
   const [apiKey, setApiKey] = useState('');
@@ -142,17 +151,22 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
   const [wireApi, setWireApi] = useState<WireApiType>('auto');
   const [models, setModels] = useState<string[]>([]);
   const [modelDraft, setModelDraft] = useState('');
+  const [providerDisplayName, setProviderDisplayName] = useState('');
 
   const providerSpec = meta?.providers.find((p) => p.name === providerName);
   const providerConfig = providerName ? config?.providers[providerName] : null;
   const uiHints = schema?.uiHints;
+  const isCustomProvider = Boolean(providerSpec?.isCustom);
 
   const apiKeyHint = providerName ? hintForPath(`providers.${providerName}.apiKey`, uiHints) : undefined;
   const apiBaseHint = providerName ? hintForPath(`providers.${providerName}.apiBase`, uiHints) : undefined;
   const extraHeadersHint = providerName ? hintForPath(`providers.${providerName}.extraHeaders`, uiHints) : undefined;
   const wireApiHint = providerName ? hintForPath(`providers.${providerName}.wireApi`, uiHints) : undefined;
+  const defaultDisplayName = providerSpec?.displayName || providerName || '';
+  const currentDisplayName = (providerConfig?.displayName || '').trim();
+  const effectiveDisplayName = currentDisplayName || defaultDisplayName;
 
-  const providerTitle = providerSpec?.displayName || providerName || t('providersSelectPlaceholder');
+  const providerTitle = providerDisplayName.trim() || effectiveDisplayName || providerName || t('providersSelectPlaceholder');
   const providerModelPrefix = providerSpec?.modelPrefix || providerName || '';
   const providerModelAliases = useMemo(
     () => normalizeModelList([providerModelPrefix, providerName || '']),
@@ -192,6 +206,7 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
       setWireApi('auto');
       setModels([]);
       setModelDraft('');
+      setProviderDisplayName('');
       return;
     }
 
@@ -201,7 +216,8 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     setWireApi(currentWireApi);
     setModels(currentEditableModels);
     setModelDraft('');
-  }, [providerName, currentApiBase, providerConfig?.extraHeaders, currentWireApi, currentEditableModels]);
+    setProviderDisplayName(effectiveDisplayName);
+  }, [providerName, currentApiBase, providerConfig?.extraHeaders, currentWireApi, currentEditableModels, effectiveDisplayName]);
 
   const hasChanges = useMemo(() => {
     if (!providerName) {
@@ -212,10 +228,16 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     const headersChanged = !headersEqual(extraHeaders, currentHeaders);
     const wireApiChanged = providerSpec?.supportsWireApi ? wireApi !== currentWireApi : false;
     const modelsChanged = !modelListsEqual(models, currentEditableModels);
+    const displayNameChanged = isCustomProvider
+      ? providerDisplayName.trim() !== effectiveDisplayName
+      : false;
 
-    return apiKeyChanged || apiBaseChanged || headersChanged || wireApiChanged || modelsChanged;
+    return apiKeyChanged || apiBaseChanged || headersChanged || wireApiChanged || modelsChanged || displayNameChanged;
   }, [
     providerName,
+    isCustomProvider,
+    providerDisplayName,
+    effectiveDisplayName,
     apiKey,
     apiBase,
     currentApiBase,
@@ -235,6 +257,7 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     setWireApi((providerSpec?.defaultWireApi || 'auto') as WireApiType);
     setModels(defaultModels);
     setModelDraft('');
+    setProviderDisplayName(defaultDisplayName);
   };
 
   const handleAddModel = () => {
@@ -261,6 +284,11 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     const trimmedApiKey = apiKey.trim();
     const trimmedApiBase = apiBase.trim();
     const normalizedHeaders = normalizeHeaders(extraHeaders);
+    const trimmedDisplayName = providerDisplayName.trim();
+
+    if (isCustomProvider && trimmedDisplayName !== effectiveDisplayName) {
+      payload.displayName = trimmedDisplayName.length > 0 ? trimmedDisplayName : null;
+    }
 
     if (trimmedApiKey.length > 0) {
       payload.apiKey = trimmedApiKey;
@@ -289,10 +317,12 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
       return;
     }
 
+    const preferredModel = models.find((modelName) => modelName.trim().length > 0) ?? '';
+    const testModel = toProviderLocalModelId(preferredModel, providerModelAliases);
     const payload: ProviderConnectionTestRequest = {
       apiBase: apiBase.trim(),
       extraHeaders: normalizeHeaders(extraHeaders),
-      model: config?.agents.defaults.model ?? null
+      model: testModel || null
     };
     if (apiKey.trim().length > 0) {
       payload.apiKey = apiKey.trim();
@@ -318,6 +348,22 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       toast.error(`${t('providerTestConnectionFailed')}: ${message}`);
+    }
+  };
+
+  const handleDeleteProvider = async () => {
+    if (!providerName || !isCustomProvider) {
+      return;
+    }
+    const confirmed = window.confirm(t('providerDeleteConfirm'));
+    if (!confirmed) {
+      return;
+    }
+    try {
+      await deleteProvider.mutateAsync({ provider: providerName });
+      onProviderDeleted?.(providerName);
+    } catch {
+      // toast handled by mutation hook
     }
   };
 
@@ -348,6 +394,24 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
 
       <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-6 py-5">
+          {isCustomProvider && (
+            <div className="space-y-2.5">
+              <Label htmlFor="providerDisplayName" className="flex items-center gap-2 text-sm font-medium text-gray-900">
+                <Hash className="h-3.5 w-3.5 text-gray-500" />
+                {t('providerDisplayName')}
+              </Label>
+              <Input
+                id="providerDisplayName"
+                type="text"
+                value={providerDisplayName}
+                onChange={(e) => setProviderDisplayName(e.target.value)}
+                placeholder={defaultDisplayName || t('providerDisplayNamePlaceholder')}
+                className="rounded-xl"
+              />
+              <p className="text-xs text-gray-500">{t('providerDisplayNameHelp')}</p>
+            </div>
+          )}
+
           <div className="space-y-2.5">
             <Label htmlFor="apiKey" className="flex items-center gap-2 text-sm font-medium text-gray-900">
               <KeyRound className="h-3.5 w-3.5 text-gray-500" />
@@ -378,6 +442,7 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
               className="rounded-xl"
             />
             <p className="text-xs text-gray-500">{apiBaseHelpText}</p>
+            {isCustomProvider && <p className="text-xs text-gray-500">{t('providerOpenAICompatHint')}</p>}
           </div>
 
           {providerSpec.supportsWireApi && (
@@ -471,6 +536,17 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
               <RotateCcw className="mr-2 h-4 w-4" />
               {t('resetToDefault')}
             </Button>
+            {isCustomProvider && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleDeleteProvider}
+                disabled={deleteProvider.isPending}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                {deleteProvider.isPending ? t('saving') : t('providerDelete')}
+              </Button>
+            )}
             <Button type="button" variant="outline" onClick={handleTestConnection} disabled={testProviderConnection.isPending}>
               <CircleDotDashed className="mr-2 h-4 w-4" />
               {testProviderConnection.isPending ? t('providerTestingConnection') : t('providerTestConnection')}

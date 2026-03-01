@@ -4,6 +4,8 @@ import {
   fetchConfigMeta,
   fetchConfigSchema,
   updateModel,
+  createProvider,
+  deleteProvider,
   updateProvider,
   testProviderConnection,
   updateChannel,
@@ -71,6 +73,40 @@ export function useUpdateProvider() {
       updateProvider(provider, data as Parameters<typeof updateProvider>[1]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['config'] });
+      queryClient.invalidateQueries({ queryKey: ['config-meta'] });
+      toast.success(t('configSaved'));
+    },
+    onError: (error: Error) => {
+      toast.error(t('configSaveFailed') + ': ' + error.message);
+    }
+  });
+}
+
+export function useCreateProvider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ data }: { data?: unknown }) =>
+      createProvider((data ?? {}) as Parameters<typeof createProvider>[0]),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config'] });
+      queryClient.invalidateQueries({ queryKey: ['config-meta'] });
+      toast.success(t('configSaved'));
+    },
+    onError: (error: Error) => {
+      toast.error(t('configSaveFailed') + ': ' + error.message);
+    }
+  });
+}
+
+export function useDeleteProvider() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ provider }: { provider: string }) => deleteProvider(provider),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['config'] });
+      queryClient.invalidateQueries({ queryKey: ['config-meta'] });
       toast.success(t('configSaved'));
     },
     onError: (error: Error) => {

@@ -47,7 +47,7 @@ export class LiteLLMProvider extends LLMProvider {
     model?: string | null;
     maxTokens?: number;
   }): Promise<LLMResponse> {
-    const requestedModel = params.model ?? this.defaultModel;
+    const requestedModel = this.stripCustomProviderPrefix(params.model ?? this.defaultModel);
     const resolvedModel = this.resolveModel(requestedModel);
     const apiModel = this.stripRoutingPrefix(resolvedModel);
     const maxTokens = params.maxTokens ?? 4096;
@@ -67,7 +67,7 @@ export class LiteLLMProvider extends LLMProvider {
     model?: string | null;
     maxTokens?: number;
   }): AsyncGenerator<LLMStreamEvent> {
-    const requestedModel = params.model ?? this.defaultModel;
+    const requestedModel = this.stripCustomProviderPrefix(params.model ?? this.defaultModel);
     const resolvedModel = this.resolveModel(requestedModel);
     const apiModel = this.stripRoutingPrefix(resolvedModel);
     const maxTokens = params.maxTokens ?? 4096;
@@ -146,6 +146,29 @@ export class LiteLLMProvider extends LLMProvider {
   }
 
   private getStandardSpec(model: string): ProviderSpec | undefined {
-    return findProviderByModel(model) ?? (this.providerName ? findProviderByName(this.providerName) : undefined);
+    if (this.providerName) {
+      const explicit = findProviderByName(this.providerName);
+      if (explicit) {
+        return explicit;
+      }
+      return undefined;
+    }
+    return findProviderByModel(model);
+  }
+
+  private stripCustomProviderPrefix(model: string): string {
+    const provider = this.providerName?.trim();
+    if (!provider) {
+      return model;
+    }
+    if (findProviderByName(provider)) {
+      return model;
+    }
+    const prefix = `${provider}/`;
+    if (!model.startsWith(prefix)) {
+      return model;
+    }
+    const stripped = model.slice(prefix.length).trim();
+    return stripped.length > 0 ? stripped : model;
   }
 }

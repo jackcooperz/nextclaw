@@ -8,6 +8,9 @@ import type {
   ProviderConfigUpdate,
   ProviderConnectionTestRequest,
   ProviderConnectionTestResult,
+  ProviderCreateRequest,
+  ProviderCreateResult,
+  ProviderDeleteResult,
   RuntimeConfigUpdate,
   SecretsConfigUpdate,
   SecretsView,
@@ -74,6 +77,31 @@ export async function updateProvider(
   const response = await api.put<ProviderConfigView>(
     `/api/config/providers/${provider}`,
     data
+  );
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+}
+
+// POST /api/config/providers
+export async function createProvider(
+  data: ProviderCreateRequest = {}
+): Promise<ProviderCreateResult> {
+  const response = await api.post<ProviderCreateResult>(
+    '/api/config/providers',
+    data
+  );
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+}
+
+// DELETE /api/config/providers/:provider
+export async function deleteProvider(provider: string): Promise<ProviderDeleteResult> {
+  const response = await api.delete<ProviderDeleteResult>(
+    `/api/config/providers/${provider}`
   );
   if (!response.ok) {
     throw new Error(response.error.message);

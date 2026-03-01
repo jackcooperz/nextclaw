@@ -35,6 +35,7 @@ export const FIELD_LABELS: Record<string, string> = {
   "session.agentToAgent": "Agent To Agent",
   "session.agentToAgent.maxPingPongTurns": "Max Ping-Pong Turns",
   providers: "Providers",
+  "providers.*.displayName": "Provider Display Name",
   "providers.*.apiKey": "API Key",
   "providers.*.apiBase": "API Base URL",
   "providers.*.extraHeaders": "Extra Headers",

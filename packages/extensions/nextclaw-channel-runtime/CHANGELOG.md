@@ -1,5 +1,13 @@
 # @nextclaw/channel-runtime
 
+## 0.1.26
+
+### Patch Changes
+
+- support dynamic custom providers with add/edit/delete workflow, ensure custom provider test model selection is provider-scoped, and strip only the provider routing prefix before upstream OpenAI-compatible API calls.
+- Updated dependencies
+  - @nextclaw/core@0.6.43
+
 ## 0.1.25
 
 ### Patch Changes

@@ -11,6 +11,7 @@ export type ApiResponse<T> =
   | { ok: false; error: ApiError };
 
 export type ProviderConfigView = {
+  displayName?: string;
   apiKeySet: boolean;
   apiKeyMasked?: string;
   apiBase?: string | null;
@@ -20,6 +21,7 @@ export type ProviderConfigView = {
 };
 
 export type ProviderConfigUpdate = {
+  displayName?: string | null;
   apiKey?: string | null;
   apiBase?: string | null;
   extraHeaders?: Record<string, string> | null;
@@ -29,6 +31,18 @@ export type ProviderConfigUpdate = {
 
 export type ProviderConnectionTestRequest = ProviderConfigUpdate & {
   model?: string | null;
+};
+
+export type ProviderCreateRequest = ProviderConfigUpdate;
+
+export type ProviderCreateResult = {
+  name: string;
+  provider: ProviderConfigView;
+};
+
+export type ProviderDeleteResult = {
+  deleted: boolean;
+  provider: string;
 };
 
 export type ProviderConnectionTestResult = {
@@ -318,6 +332,7 @@ export type ConfigView = {
 export type ProviderSpecView = {
   name: string;
   displayName?: string;
+  isCustom?: boolean;
   modelPrefix?: string;
   keywords: string[];
   envKey: string;

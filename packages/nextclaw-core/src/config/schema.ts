@@ -271,6 +271,7 @@ export const AgentsConfigSchema = z.object({
 });
 
 export const ProviderConfigSchema = z.object({
+  displayName: z.string().trim().max(80).default(""),
   apiKey: z.string().default(""),
   apiBase: z.string().nullable().default(null),
   extraHeaders: z.record(z.string()).nullable().default(null),
@@ -291,7 +292,7 @@ export const ProvidersConfigSchema = z.object({
   moonshot: ProviderConfigSchema.default({}),
   minimax: ProviderConfigSchema.default({}),
   aihubmix: ProviderConfigSchema.default({})
-});
+}).catchall(ProviderConfigSchema);
 
 export const PluginEntrySchema = z.object({
   enabled: z.boolean().optional(),
@@ -432,17 +433,38 @@ export function getWorkspacePathFromConfig(config: Config): string {
 }
 
 export function matchProvider(config: Config, model?: string): { provider: ProviderConfig | null; name: string | null } {
-  const modelLower = (model ?? config.agents.defaults.model).toLowerCase();
+  const providers = config.providers as Record<string, ProviderConfig>;
+  const rawModel = String(model ?? config.agents.defaults.model ?? "").trim();
+  const modelLower = rawModel.toLowerCase();
+  const slashIndex = modelLower.indexOf("/");
+  const modelPrefix = slashIndex >= 0 ? modelLower.slice(0, slashIndex) : "";
+  if (modelPrefix) {
+    for (const [name, provider] of Object.entries(providers)) {
+      if (name.toLowerCase() === modelPrefix) {
+        return { provider, name };
+      }
+    }
+  }
+
+  const builtinProviderNames = new Set(PROVIDERS.map((spec) => spec.name));
   for (const spec of PROVIDERS) {
-    const provider = (config.providers as Record<string, ProviderConfig>)[spec.name];
+    const provider = providers[spec.name];
     if (provider && provider.apiKey && spec.keywords.some((kw) => modelLower.includes(kw))) {
       return { provider, name: spec.name };
     }
   }
   for (const spec of PROVIDERS) {
-    const provider = (config.providers as Record<string, ProviderConfig>)[spec.name];
+    const provider = providers[spec.name];
     if (provider && provider.apiKey) {
       return { provider, name: spec.name };
+    }
+  }
+  for (const [name, provider] of Object.entries(providers)) {
+    if (builtinProviderNames.has(name)) {
+      continue;
+    }
+    if (provider.apiKey) {
+      return { provider, name };
     }
   }
   return { provider: null, name: null };

@@ -1,5 +1,11 @@
 # Logs
 
+- [docs/logs/2026-03-01-dynamic-custom-provider/v0.0.1-dynamic-custom-provider/README.md](docs/logs/2026-03-01-dynamic-custom-provider/v0.0.1-dynamic-custom-provider/README.md)
+- [docs/logs/2026-03-01-openai-chat-payload-guard/v0.0.1-openai-chat-payload-guard/CHANGELOG.md](docs/logs/2026-03-01-openai-chat-payload-guard/v0.0.1-openai-chat-payload-guard/CHANGELOG.md)
+- [docs/logs/2026-03-01-qq-sender-user-name-fallback/v0.0.1-qq-sender-user-name-fallback/CHANGELOG.md](docs/logs/2026-03-01-qq-sender-user-name-fallback/v0.0.1-qq-sender-user-name-fallback/CHANGELOG.md)
+- [docs/logs/2026-03-01-qq-url-guard-skill/v0.0.1-qq-url-guard-skill/CHANGELOG.md](docs/logs/2026-03-01-qq-url-guard-skill/v0.0.1-qq-url-guard-skill/CHANGELOG.md)
+- [docs/logs/2026-03-01-qq-private-url-guard/v0.0.1-qq-private-url-guard/CHANGELOG.md](docs/logs/2026-03-01-qq-private-url-guard/v0.0.1-qq-private-url-guard/CHANGELOG.md)
+- [docs/logs/2026-03-01-qq-private-nickname-identity/v0.0.1-qq-private-nickname-identity/CHANGELOG.md](docs/logs/2026-03-01-qq-private-nickname-identity/v0.0.1-qq-private-nickname-identity/CHANGELOG.md)
 - [docs/logs/2026-03-01-qq-group-speaker-runtime-fix/v0.0.1-qq-group-speaker-runtime-fix/CHANGELOG.md](docs/logs/2026-03-01-qq-group-speaker-runtime-fix/v0.0.1-qq-group-speaker-runtime-fix/CHANGELOG.md)
 - [docs/logs/2026-03-01-telegram-ack-reaction-align/v0.0.1-telegram-ack-reaction-align/README.md](docs/logs/2026-03-01-telegram-ack-reaction-align/v0.0.1-telegram-ack-reaction-align/README.md)
 - [docs/logs/2026-03-01-qq-group-speaker-distinction-skill/v0.0.1-qq-group-speaker-distinction-skill/CHANGELOG.md](docs/logs/2026-03-01-qq-group-speaker-distinction-skill/v0.0.1-qq-group-speaker-distinction-skill/CHANGELOG.md)

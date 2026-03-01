@@ -100,9 +100,10 @@ export function ModelConfig() {
         (config?.providers?.[provider.name]?.models ?? []).map((model) => toProviderLocalModel(model, aliases))
       );
       const allModels = normalizeStringList([...defaultModels, ...customModels]);
+      const configDisplayName = config?.providers?.[provider.name]?.displayName?.trim();
       return {
         name: provider.name,
-        displayName: provider.displayName || provider.name,
+        displayName: configDisplayName || provider.displayName || provider.name,
         prefix,
         aliases,
         models: allModels

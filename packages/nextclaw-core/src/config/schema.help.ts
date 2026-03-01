@@ -30,6 +30,7 @@ export const FIELD_HELP: Record<string, string> = {
   "session.agentToAgent.maxPingPongTurns": "Maximum allowed agent-to-agent handoff depth.",
   "providers.*": "Configure credentials and endpoints for this provider.",
   "providers.openai": "Leading AI models including GPT-4 and GPT-3.5.",
+  "providers.*.displayName": "Optional custom label shown in UI (recommended for custom provider slots).",
   "providers.*.apiKey": "API key for this provider.",
   "providers.minimax.apiBase": "China: https://api.minimaxi.com/v1. Overseas: https://api.minimax.io/v1. Pick the base URL that matches your account region.",
   "providers.*.apiBase": "Override the provider API base URL if needed.",

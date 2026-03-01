@@ -10,6 +10,8 @@ import {
   loadConfigOrDefault,
   updateChannel,
   updateModel,
+  createCustomProvider,
+  deleteCustomProvider,
   updateProvider,
   testProviderConnection,
   updateSecrets,
@@ -44,6 +46,9 @@ import type {
   CronActionResult,
   CronJobView,
   ProviderConnectionTestRequest,
+  ProviderCreateRequest,
+  ProviderCreateResult,
+  ProviderDeleteResult,
   ProviderConfigUpdate,
   SecretsConfigUpdate,
   RuntimeConfigUpdate,
@@ -1684,6 +1689,35 @@ export function createUiRouter(options: UiRouterOptions): Hono {
     }
     options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
     return c.json(ok(result));
+  });
+
+  app.post("/api/config/providers", async (c) => {
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = createCustomProvider(
+      options.configPath,
+      body.data as ProviderCreateRequest
+    );
+    options.publish({ type: "config.updated", payload: { path: `providers.${result.name}` } });
+    return c.json(ok({
+      name: result.name,
+      provider: result.provider
+    } satisfies ProviderCreateResult));
+  });
+
+  app.delete("/api/config/providers/:provider", async (c) => {
+    const provider = c.req.param("provider");
+    const result = deleteCustomProvider(options.configPath, provider);
+    if (result === null) {
+      return c.json(err("NOT_FOUND", `custom provider not found: ${provider}`), 404);
+    }
+    options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
+    return c.json(ok({
+      deleted: true,
+      provider
+    } satisfies ProviderDeleteResult));
   });
 
   app.post("/api/config/providers/:provider/test", async (c) => {

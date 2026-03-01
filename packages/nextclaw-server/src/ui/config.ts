@@ -69,6 +69,64 @@ const PREFERRED_PROVIDER_ORDER = [
 const PREFERRED_PROVIDER_ORDER_INDEX: Map<string, number> = new Map(
   PREFERRED_PROVIDER_ORDER.map((name, index) => [name, index])
 );
+const BUILTIN_PROVIDER_NAMES = new Set(PROVIDERS.map((spec) => spec.name));
+const CUSTOM_PROVIDER_WIRE_API_OPTIONS: Array<"auto" | "chat" | "responses"> = ["auto", "chat", "responses"];
+const CUSTOM_PROVIDER_PREFIX = "custom-";
+
+function normalizeOptionalDisplayName(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function isCustomProviderName(name: string): boolean {
+  return name.trim().length > 0 && !BUILTIN_PROVIDER_NAMES.has(name);
+}
+
+function resolveCustomProviderFallbackDisplayName(name: string): string {
+  if (name.startsWith(CUSTOM_PROVIDER_PREFIX)) {
+    const suffix = name.slice(CUSTOM_PROVIDER_PREFIX.length);
+    if (/^\d+$/.test(suffix)) {
+      return `Custom ${suffix}`;
+    }
+  }
+  return name;
+}
+
+function resolveProviderDisplayName(
+  providerName: string,
+  provider: ProviderConfig | undefined,
+  spec?: ProviderSpec
+): string | undefined {
+  const configDisplayName = normalizeOptionalDisplayName(provider?.displayName);
+  if (isCustomProviderName(providerName)) {
+    return configDisplayName ?? resolveCustomProviderFallbackDisplayName(providerName);
+  }
+  return spec?.displayName ?? configDisplayName ?? spec?.name;
+}
+
+function listCustomProviderNames(config: Config): string[] {
+  return Object.keys(config.providers).filter((name) => isCustomProviderName(name));
+}
+
+function findNextCustomProviderName(config: Config): string {
+  const providers = config.providers as Record<string, ProviderConfig>;
+  let index = 1;
+  while (providers[`${CUSTOM_PROVIDER_PREFIX}${index}`]) {
+    index += 1;
+  }
+  return `${CUSTOM_PROVIDER_PREFIX}${index}`;
+}
+
+function clearSecretRefsByPrefix(config: Config, pathPrefix: string): void {
+  for (const key of Object.keys(config.secrets.refs)) {
+    if (key === pathPrefix || key.startsWith(`${pathPrefix}.`)) {
+      delete config.secrets.refs[key];
+    }
+  }
+}
 
 type ChannelTutorialUrls = NonNullable<ConfigMetaView["channels"][number]["tutorialUrls"]>;
 
@@ -359,14 +417,16 @@ function toProviderView(
         ) as Record<string, string>)
       : null;
   const view: ProviderConfigView = {
+    displayName: resolveProviderDisplayName(providerName, provider, spec),
     apiKeySet: masked.apiKeySet || apiKeyRefSet,
     apiKeyMasked: masked.apiKeyMasked ?? (apiKeyRefSet ? "****" : undefined),
     apiBase: provider.apiBase ?? null,
     extraHeaders: extraHeaders && Object.keys(extraHeaders).length > 0 ? extraHeaders : null,
     models: normalizeModelList(provider.models ?? [])
   };
-  if (spec?.supportsWireApi) {
-    view.wireApi = provider.wireApi ?? spec.defaultWireApi ?? "auto";
+  const supportsWireApi = Boolean(spec?.supportsWireApi) || isCustomProviderName(providerName);
+  if (supportsWireApi) {
+    view.wireApi = provider.wireApi ?? spec?.defaultWireApi ?? "auto";
   }
   return view;
 }
@@ -407,20 +467,25 @@ function clearSecretRef(config: Config, path: string): void {
 }
 
 export function buildConfigMeta(config: Config): ConfigMetaView {
-  const providers = PROVIDERS.map((spec) => ({
-    name: spec.name,
-    displayName: spec.displayName,
-    modelPrefix: spec.modelPrefix,
-    keywords: spec.keywords,
-    envKey: spec.envKey,
-    isGateway: spec.isGateway,
-    isLocal: spec.isLocal,
-    defaultApiBase: spec.defaultApiBase,
-    defaultModels: normalizeModelList(spec.defaultModels ?? []),
-    supportsWireApi: spec.supportsWireApi,
-    wireApiOptions: spec.wireApiOptions,
-    defaultWireApi: spec.defaultWireApi
-  })).sort((left, right) => {
+  const configProviders = config.providers as Record<string, ProviderConfig>;
+  const builtinProviders = PROVIDERS.map((spec) => {
+    const providerConfig = configProviders[spec.name];
+    return {
+      name: spec.name,
+      displayName: resolveProviderDisplayName(spec.name, providerConfig, spec),
+      isCustom: false,
+      modelPrefix: spec.modelPrefix,
+      keywords: spec.keywords,
+      envKey: spec.envKey,
+      isGateway: spec.isGateway,
+      isLocal: spec.isLocal,
+      defaultApiBase: spec.defaultApiBase,
+      defaultModels: normalizeModelList(spec.defaultModels ?? []),
+      supportsWireApi: spec.supportsWireApi,
+      wireApiOptions: spec.wireApiOptions,
+      defaultWireApi: spec.defaultWireApi
+    };
+  }).sort((left, right) => {
     const leftRank = PREFERRED_PROVIDER_ORDER_INDEX.get(left.name);
     const rightRank = PREFERRED_PROVIDER_ORDER_INDEX.get(right.name);
     if (leftRank !== undefined && rightRank !== undefined) {
@@ -434,6 +499,29 @@ export function buildConfigMeta(config: Config): ConfigMetaView {
     }
     return left.name.localeCompare(right.name);
   });
+
+  const customProviders = listCustomProviderNames(config)
+    .sort((left, right) => left.localeCompare(right, undefined, { numeric: true, sensitivity: "base" }))
+    .map((name) => {
+      const providerConfig = configProviders[name];
+      const displayName = resolveProviderDisplayName(name, providerConfig);
+      return {
+        name,
+        displayName,
+        isCustom: true,
+        modelPrefix: name,
+        keywords: normalizeModelList([name, displayName ?? ""]),
+        envKey: "OPENAI_API_KEY",
+        isGateway: false,
+        isLocal: false,
+        defaultApiBase: undefined,
+        defaultModels: [],
+        supportsWireApi: true,
+        wireApiOptions: CUSTOM_PROVIDER_WIRE_API_OPTIONS,
+        defaultWireApi: "auto" as const
+      };
+    });
+  const providers = [...customProviders, ...builtinProviders];
   const channels = Object.keys(config.channels).map((name) => {
     const tutorialUrls = CHANNEL_TUTORIAL_URLS[name];
     const tutorialUrl = tutorialUrls?.default ?? tutorialUrls?.en ?? tutorialUrls?.zh;
@@ -551,6 +639,10 @@ export function updateProvider(
     return null;
   }
   const spec = findProviderByName(providerName);
+  const isCustom = isCustomProviderName(providerName);
+  if (Object.prototype.hasOwnProperty.call(patch, "displayName") && isCustom) {
+    provider.displayName = normalizeOptionalDisplayName(patch.displayName) ?? "";
+  }
   if (Object.prototype.hasOwnProperty.call(patch, "apiKey")) {
     provider.apiKey = patch.apiKey ?? "";
     clearSecretRef(config, `providers.${providerName}.apiKey`);
@@ -561,8 +653,8 @@ export function updateProvider(
   if (Object.prototype.hasOwnProperty.call(patch, "extraHeaders")) {
     provider.extraHeaders = patch.extraHeaders ?? null;
   }
-  if (Object.prototype.hasOwnProperty.call(patch, "wireApi") && spec?.supportsWireApi) {
-    provider.wireApi = patch.wireApi ?? spec.defaultWireApi ?? "auto";
+  if (Object.prototype.hasOwnProperty.call(patch, "wireApi") && (spec?.supportsWireApi || isCustom)) {
+    provider.wireApi = patch.wireApi ?? spec?.defaultWireApi ?? "auto";
   }
   if (Object.prototype.hasOwnProperty.call(patch, "models")) {
     provider.models = normalizeModelList(patch.models ?? []);
@@ -572,6 +664,48 @@ export function updateProvider(
   const uiHints = buildUiHints(next);
   const updated = (next.providers as Record<string, ProviderConfig>)[providerName];
   return toProviderView(next, updated, providerName, uiHints, spec ?? undefined);
+}
+
+export function createCustomProvider(
+  configPath: string,
+  patch: ProviderConfigUpdate = {}
+): { name: string; provider: ProviderConfigView } {
+  const config = loadConfigOrDefault(configPath);
+  const providerName = findNextCustomProviderName(config);
+  const providers = config.providers as Record<string, ProviderConfig>;
+  const generatedDisplayName = resolveCustomProviderFallbackDisplayName(providerName);
+  providers[providerName] = {
+    displayName: normalizeOptionalDisplayName(patch.displayName) ?? generatedDisplayName,
+    apiKey: normalizeOptionalString(patch.apiKey) ?? "",
+    apiBase: normalizeOptionalString(patch.apiBase),
+    extraHeaders: normalizeHeaders(patch.extraHeaders ?? null),
+    wireApi: patch.wireApi ?? "auto",
+    models: normalizeModelList(patch.models ?? [])
+  };
+  const next = ConfigSchema.parse(config);
+  saveConfig(next, configPath);
+  const uiHints = buildUiHints(next);
+  const created = (next.providers as Record<string, ProviderConfig>)[providerName];
+  return {
+    name: providerName,
+    provider: toProviderView(next, created, providerName, uiHints)
+  };
+}
+
+export function deleteCustomProvider(configPath: string, providerName: string): boolean | null {
+  if (!isCustomProviderName(providerName)) {
+    return null;
+  }
+  const config = loadConfigOrDefault(configPath);
+  const providers = config.providers as Record<string, ProviderConfig>;
+  if (!providers[providerName]) {
+    return null;
+  }
+  delete providers[providerName];
+  clearSecretRefsByPrefix(config, `providers.${providerName}`);
+  const next = ConfigSchema.parse(config);
+  saveConfig(next, configPath);
+  return true;
 }
 
 function normalizeOptionalString(value: unknown): string | null {
@@ -595,9 +729,50 @@ function normalizeHeaders(input: Record<string, string> | null | undefined): Rec
   return Object.fromEntries(entries);
 }
 
-function resolveTestModel(config: Config, providerName: string, requestedModel: string | null): string | null {
+function buildScopedProviderModel(
+  providerName: string,
+  model: string,
+  spec?: ProviderSpec
+): string {
+  const trimmed = model.trim();
+  if (!trimmed) {
+    return "";
+  }
+  if (trimmed.includes("/")) {
+    return trimmed;
+  }
+  if (isCustomProviderName(providerName)) {
+    return trimmed;
+  }
+  const prefix = (spec?.modelPrefix ?? providerName).trim();
+  if (!prefix) {
+    return trimmed;
+  }
+  return `${prefix}/${trimmed}`;
+}
+
+function resolveTestModel(
+  config: Config,
+  providerName: string,
+  requestedModel: string | null,
+  provider: ProviderConfig,
+  spec?: ProviderSpec
+): string | null {
   if (requestedModel) {
+    if (isCustomProviderName(providerName)) {
+      const prefix = `${providerName}/`;
+      if (requestedModel.startsWith(prefix)) {
+        return requestedModel.slice(prefix.length) || null;
+      }
+    }
     return requestedModel;
+  }
+
+  const providerModels = normalizeModelList(provider.models ?? [])
+    .map((modelId) => buildScopedProviderModel(providerName, modelId, spec))
+    .filter((modelId) => modelId.length > 0);
+  if (providerModels.length > 0) {
+    return providerModels[0];
   }
 
   const defaultModel = normalizeOptionalString(config.agents.defaults.model);
@@ -608,6 +783,9 @@ function resolveTestModel(config: Config, providerName: string, requestedModel: 
     }
   }
 
+  if (isCustomProviderName(providerName)) {
+    return null;
+  }
   return PROVIDER_TEST_MODEL_FALLBACKS[providerName] ?? defaultModel ?? null;
 }
 
@@ -645,8 +823,9 @@ export async function testProviderConnection(
     ? normalizeHeaders(patch.extraHeaders ?? null)
     : normalizeHeaders(provider.extraHeaders ?? null);
 
-  const wireApi = spec?.supportsWireApi
-    ? patch.wireApi ?? provider.wireApi ?? spec.defaultWireApi ?? "auto"
+  const isCustom = isCustomProviderName(providerName);
+  const wireApi = (spec?.supportsWireApi || isCustom)
+    ? patch.wireApi ?? provider.wireApi ?? spec?.defaultWireApi ?? "auto"
     : null;
 
   if (!apiKey && !spec?.isLocal) {
@@ -659,13 +838,13 @@ export async function testProviderConnection(
   }
 
   const requestedModel = normalizeOptionalString(patch.model);
-  const model = resolveTestModel(config, providerName, requestedModel);
+  const model = resolveTestModel(config, providerName, requestedModel, provider, spec ?? undefined);
   if (!model) {
     return {
       success: false,
       provider: providerName,
       latencyMs: 0,
-      message: "No test model found. Set a default model first, then try again."
+      message: "No test model found. Configure provider models or set a default model for this provider, then try again."
     };
   }
 

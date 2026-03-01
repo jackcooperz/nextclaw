@@ -1,5 +1,11 @@
 # @nextclaw/ui
 
+## 0.5.40
+
+### Patch Changes
+
+- support dynamic custom providers with add/edit/delete workflow, ensure custom provider test model selection is provider-scoped, and strip only the provider routing prefix before upstream OpenAI-compatible API calls.
+
 ## 0.5.39
 
 ### Patch Changes
