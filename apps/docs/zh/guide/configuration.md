@@ -87,6 +87,8 @@ NextClaw 已支持 `openclaw secrets` 风格的秘密引用，支持 `env` / `fi
 
 ### 本地 vLLM（或任意 OpenAI 兼容服务）
 
+如果你要按步骤跑通本地 Ollama + Qwen3，见：[本地 Ollama + Qwen3 教程（macOS）](/zh/guide/tutorials/local-ollama-qwen3)。
+
 ```json
 {
   "providers": {

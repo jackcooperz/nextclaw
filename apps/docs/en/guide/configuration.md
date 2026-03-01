@@ -87,6 +87,8 @@ Compatibility note:
 
 ### Local vLLM (or any OpenAI-compatible server)
 
+Need a full local walkthrough for Ollama + Qwen3? See [Local Ollama + Qwen3 Tutorial (macOS)](/en/guide/tutorials/local-ollama-qwen3).
+
 ```json
 {
   "providers": {

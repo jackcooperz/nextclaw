@@ -5,3 +5,4 @@
 ## 当前教程
 
 - [飞书配置教程](/zh/guide/tutorials/feishu)
+- [本地 Ollama + Qwen3 教程（macOS）](/zh/guide/tutorials/local-ollama-qwen3)
