@@ -180,6 +180,9 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
     () => resolveEditableModels(defaultModels, currentModels),
     [defaultModels, currentModels]
   );
+  const apiBaseHelpText = providerName === 'minimax'
+    ? t('providerApiBaseHelpMinimax')
+    : (apiBaseHint?.help || t('providerApiBaseHelp'));
 
   useEffect(() => {
     if (!providerName) {
@@ -374,7 +377,7 @@ export function ProviderForm({ providerName }: ProviderFormProps) {
               placeholder={defaultApiBase || apiBaseHint?.placeholder || 'https://api.example.com'}
               className="rounded-xl"
             />
-            <p className="text-xs text-gray-500">{apiBaseHint?.help || t('providerApiBaseHelp')}</p>
+            <p className="text-xs text-gray-500">{apiBaseHelpText}</p>
           </div>
 
           {providerSpec.supportsWireApi && (

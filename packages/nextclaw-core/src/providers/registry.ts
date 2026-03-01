@@ -222,7 +222,7 @@ export const PROVIDERS: ProviderSpec[] = [
     isLocal: false,
     detectByKeyPrefix: "",
     detectByBaseKeyword: "",
-    defaultApiBase: "https://api.minimax.io/v1",
+    defaultApiBase: "https://api.minimaxi.com/v1",
     defaultModels: ["minimax/MiniMax-M2.5"],
     stripModelPrefix: false,
     modelOverrides: []

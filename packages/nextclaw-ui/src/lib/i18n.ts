@@ -204,6 +204,10 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   providerFormDescription: { zh: '配置 AI 提供商的 API 密钥与参数', en: 'Configure API keys and parameters for AI provider' },
   enterApiKey: { zh: '请输入 API 密钥', en: 'Enter API Key' },
   providerApiBaseHelp: { zh: '留空或恢复默认即可使用预置 API Base。', en: 'Leave empty or reset to use the default API base.' },
+  providerApiBaseHelpMinimax: {
+    zh: 'MiniMax 中国区请使用 https://api.minimaxi.com/v1；海外请使用 https://api.minimax.io/v1。',
+    en: 'Use https://api.minimaxi.com/v1 for Mainland China accounts, and https://api.minimax.io/v1 for overseas accounts.'
+  },
   providerExtraHeadersHelp: { zh: '用于自定义请求头（可选）。', en: 'Optional custom request headers.' },
   providerTestConnection: { zh: '测试连接', en: 'Test Connection' },
   providerTestingConnection: { zh: '测试中...', en: 'Testing...' },
