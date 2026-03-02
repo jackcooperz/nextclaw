@@ -21,6 +21,11 @@ writeFileSync(
   [
     "const http = require('node:http');",
     "const args = process.argv.slice(2);",
+    "const command = args[0];",
+    "if (command === 'init') {",
+    "  process.exit(0);",
+    "}",
+    "if (command !== 'serve') throw new Error('expected serve command');",
     "const portIndex = args.indexOf('--ui-port');",
     "const port = portIndex >= 0 ? Number(args[portIndex + 1]) : 0;",
     "if (!port) throw new Error('missing --ui-port');",

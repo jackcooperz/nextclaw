@@ -3,6 +3,7 @@
   "version": "0.0.3",
   "private": true,
   "description": "NextClaw desktop shell powered by Electron.",
+  "author": "NextClaw Team",
   "main": "dist/main.js",
   "license": "MIT",
   "scripts": {
@@ -16,6 +17,20 @@
     "smoke": "pnpm build:main && node scripts/smoke-runtime.mjs"
   },
   "dependencies": {
+    "@nextclaw/channel-plugin-dingtalk": "workspace:*",
+    "@nextclaw/channel-plugin-discord": "workspace:*",
+    "@nextclaw/channel-plugin-email": "workspace:*",
+    "@nextclaw/channel-plugin-feishu": "workspace:*",
+    "@nextclaw/channel-plugin-mochat": "workspace:*",
+    "@nextclaw/channel-plugin-qq": "workspace:*",
+    "@nextclaw/channel-plugin-slack": "workspace:*",
+    "@nextclaw/channel-plugin-telegram": "workspace:*",
+    "@nextclaw/channel-plugin-wecom": "workspace:*",
+    "@nextclaw/channel-plugin-whatsapp": "workspace:*",
+    "@nextclaw/channel-runtime": "workspace:*",
+    "@nextclaw/core": "workspace:*",
+    "@nextclaw/openclaw-compat": "workspace:*",
+    "@nextclaw/server": "workspace:*",
     "electron-updater": "^6.6.2",
     "nextclaw": "workspace:*"
   },
@@ -38,9 +53,9 @@
     },
     "files": [
       "dist/**/*",
-      "node_modules/**/*",
       "package.json"
     ],
+    "npmRebuild": false,
     "asar": true,
     "mac": {
       "target": [

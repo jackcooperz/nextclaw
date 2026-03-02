@@ -30,6 +30,7 @@ export class RuntimeServiceProcess {
     if (this.child) {
       throw new Error("Runtime process already started.");
     }
+    await this.ensureInitialized();
     const port = await pickFreePort();
     const child = fork(this.options.scriptPath, ["serve", "--ui-port", String(port)], {
       env: {
@@ -56,6 +57,45 @@ export class RuntimeServiceProcess {
     const baseUrl = `http://127.0.0.1:${port}`;
     await waitForHealth(`${baseUrl}${this.healthPath}`, this.startupTimeoutMs);
     return { port, baseUrl };
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    this.options.logger.info("[runtime] running bootstrap init");
+    await this.runCliCommand(["init"], "init");
+  }
+
+  private async runCliCommand(args: string[], label: string): Promise<void> {
+    await new Promise<void>((resolve, reject) => {
+      const child = fork(this.options.scriptPath, args, {
+        env: {
+          ...process.env,
+          ELECTRON_RUN_AS_NODE: "1"
+        },
+        stdio: "pipe"
+      });
+
+      child.stdout?.on("data", (chunk) => {
+        this.options.logger.info(`[runtime:${label}] ${String(chunk).trimEnd()}`);
+      });
+      child.stderr?.on("data", (chunk) => {
+        this.options.logger.warn(`[runtime:${label}] ${String(chunk).trimEnd()}`);
+      });
+
+      child.once("error", (error) => {
+        reject(error);
+      });
+      child.once("exit", (code, signal) => {
+        if (code === 0) {
+          resolve();
+          return;
+        }
+        reject(
+          new Error(
+            `Runtime command failed: ${label} exited with code=${String(code)}, signal=${String(signal)}`
+          )
+        );
+      });
+    });
   }
 
   async stop(): Promise<void> {

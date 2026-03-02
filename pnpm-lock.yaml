@@ -14,6 +14,48 @@ importers:
 
   apps/desktop:
     dependencies:
+      '@nextclaw/channel-plugin-dingtalk':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-dingtalk
+      '@nextclaw/channel-plugin-discord':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-discord
+      '@nextclaw/channel-plugin-email':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-email
+      '@nextclaw/channel-plugin-feishu':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-feishu
+      '@nextclaw/channel-plugin-mochat':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-mochat
+      '@nextclaw/channel-plugin-qq':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-qq
+      '@nextclaw/channel-plugin-slack':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-slack
+      '@nextclaw/channel-plugin-telegram':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-telegram
+      '@nextclaw/channel-plugin-wecom':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-wecom
+      '@nextclaw/channel-plugin-whatsapp':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-plugin-whatsapp
+      '@nextclaw/channel-runtime':
+        specifier: workspace:*
+        version: link:../../packages/extensions/nextclaw-channel-runtime
+      '@nextclaw/core':
+        specifier: workspace:*
+        version: link:../../packages/nextclaw-core
+      '@nextclaw/openclaw-compat':
+        specifier: workspace:*
+        version: link:../../packages/nextclaw-openclaw-compat
+      '@nextclaw/server':
+        specifier: workspace:*
+        version: link:../../packages/nextclaw-server
       electron-updater:
         specifier: ^6.6.2
         version: 6.8.3
