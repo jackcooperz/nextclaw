@@ -442,6 +442,14 @@ export class AgentLoop {
     return `${block}\n\n${content}`;
   }
 
+  private prependRequestedSkills(content: string, requestedSkillNames: string[]): string {
+    if (!requestedSkillNames.length) {
+      return content;
+    }
+    const names = requestedSkillNames.join(", ");
+    return `[Requested skills for this turn: ${names}]\n\n${content}`;
+  }
+
   private pruneMessagesForInputBudget(messages: Array<Record<string, unknown>>): void {
     const result = this.inputBudgetPruner.prune({
       messages,
@@ -510,7 +518,11 @@ export class AgentLoop {
     });
 
     const pendingSystemEvents = this.drainPendingSystemEvents(session);
-    const currentMessage = this.prependSystemEvents(msg.content, pendingSystemEvents);
+    const requestedSkillNames = this.resolveRequestedSkillNames(msg.metadata);
+    const currentMessage = this.prependRequestedSkills(
+      this.prependSystemEvents(msg.content, pendingSystemEvents),
+      requestedSkillNames
+    );
 
     const messageTool = this.tools.get("message");
     if (messageTool instanceof MessageTool) {
@@ -539,7 +551,6 @@ export class AgentLoop {
       chatId: msg.chatId,
       accountId: accountId ?? null
     });
-    const requestedSkillNames = this.resolveRequestedSkillNames(msg.metadata);
 
     const messages = this.context.buildMessages({
       history: this.sessions.getHistory(session),
@@ -720,10 +731,11 @@ export class AgentLoop {
       accountId: accountId ?? null
     });
     const requestedSkillNames = this.resolveRequestedSkillNames(msg.metadata);
+    const currentMessage = this.prependRequestedSkills(msg.content, requestedSkillNames);
 
     const messages = this.context.buildMessages({
       history: this.sessions.getHistory(session),
-      currentMessage: msg.content,
+      currentMessage,
       channel: originChannel,
       chatId: originChatId,
       sessionKey,
