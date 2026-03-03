@@ -10,18 +10,6 @@ on:
       - "workers/marketplace-api/package.json"
       - "workers/marketplace-api/scripts/**"
       - ".github/workflows/marketplace-catalog-sync.yml"
-  push:
-    branches:
-      - master
-      - main
-    paths:
-      - "workers/marketplace-api/data/plugins-catalog.json"
-      - "workers/marketplace-api/data/skills-catalog.json"
-      - "workers/marketplace-api/src/**"
-      - "workers/marketplace-api/wrangler.toml"
-      - "workers/marketplace-api/package.json"
-      - "workers/marketplace-api/scripts/**"
-      - ".github/workflows/marketplace-catalog-sync.yml"
   workflow_dispatch:
 
 permissions:
