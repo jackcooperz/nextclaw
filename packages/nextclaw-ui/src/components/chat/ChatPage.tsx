@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { SessionEntryView } from '@/api/types';
+import type { ComponentProps, Dispatch, MutableRefObject, SetStateAction } from 'react';
+import type { SessionEntryView, SessionEventView } from '@/api/types';
 import {
   useChatCapabilities,
   useConfig,
@@ -94,6 +95,130 @@ type MainPanelView = 'chat' | 'cron' | 'skills';
 type ChatPageProps = {
   view: MainPanelView;
 };
+
+type UseSessionSyncParams = {
+  view: MainPanelView;
+  routeSessionKey: string | null;
+  selectedSessionKey: string | null;
+  selectedAgentId: string;
+  setSelectedSessionKey: Dispatch<SetStateAction<string | null>>;
+  setSelectedAgentId: Dispatch<SetStateAction<string>>;
+  selectedSessionKeyRef: MutableRefObject<string | null>;
+  isUserScrollingRef: MutableRefObject<boolean>;
+  resetStreamState: () => void;
+};
+
+function useChatSessionSync(params: UseSessionSyncParams): void {
+  const {
+    view,
+    routeSessionKey,
+    selectedSessionKey,
+    selectedAgentId,
+    setSelectedSessionKey,
+    setSelectedAgentId,
+    selectedSessionKeyRef,
+    isUserScrollingRef,
+    resetStreamState
+  } = params;
+
+  useEffect(() => {
+    if (view !== 'chat') {
+      return;
+    }
+    if (routeSessionKey) {
+      if (selectedSessionKey !== routeSessionKey) {
+        setSelectedSessionKey(routeSessionKey);
+      }
+      return;
+    }
+    if (selectedSessionKey !== null) {
+      setSelectedSessionKey(null);
+      resetStreamState();
+    }
+  }, [resetStreamState, routeSessionKey, selectedSessionKey, setSelectedSessionKey, view]);
+
+  useEffect(() => {
+    const inferred = selectedSessionKey ? resolveAgentIdFromSessionKey(selectedSessionKey) : null;
+    if (!inferred) {
+      return;
+    }
+    if (selectedAgentId !== inferred) {
+      setSelectedAgentId(inferred);
+    }
+  }, [selectedAgentId, selectedSessionKey, setSelectedAgentId]);
+
+  useEffect(() => {
+    selectedSessionKeyRef.current = selectedSessionKey;
+    isUserScrollingRef.current = false;
+  }, [isUserScrollingRef, selectedSessionKey, selectedSessionKeyRef]);
+}
+
+type UseThreadScrollParams = {
+  threadRef: MutableRefObject<HTMLDivElement | null>;
+  isUserScrollingRef: MutableRefObject<boolean>;
+  mergedEvents: SessionEventView[];
+  isSending: boolean;
+};
+
+function useChatThreadScroll(params: UseThreadScrollParams): { handleScroll: () => void } {
+  const { threadRef, isUserScrollingRef, mergedEvents, isSending } = params;
+
+  const isNearBottom = useCallback(() => {
+    const element = threadRef.current;
+    if (!element) {
+      return true;
+    }
+    const threshold = 50;
+    return element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
+  }, [threadRef]);
+
+  const handleScroll = useCallback(() => {
+    if (isNearBottom()) {
+      isUserScrollingRef.current = false;
+    } else {
+      isUserScrollingRef.current = true;
+    }
+  }, [isNearBottom, isUserScrollingRef]);
+
+  useEffect(() => {
+    const element = threadRef.current;
+    if (!element || isUserScrollingRef.current) {
+      return;
+    }
+    element.scrollTop = element.scrollHeight;
+  }, [isSending, isUserScrollingRef, mergedEvents, threadRef]);
+
+  return { handleScroll };
+}
+
+type ChatPageLayoutProps = {
+  view: MainPanelView;
+  sidebarProps: ComponentProps<typeof ChatSidebar>;
+  conversationProps: ComponentProps<typeof ChatConversationPanel>;
+  confirmDialog: JSX.Element;
+};
+
+function ChatPageLayout({ view, sidebarProps, conversationProps, confirmDialog }: ChatPageLayoutProps) {
+  return (
+    <div className="h-full flex">
+      <ChatSidebar {...sidebarProps} />
+
+      {view === 'chat' ? (
+        <ChatConversationPanel {...conversationProps} />
+      ) : (
+        <section className="flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-gray-50/60 to-white">
+          <div className="h-full overflow-auto custom-scrollbar">
+            <div className="mx-auto w-full max-w-[min(1120px,100%)] px-6 py-5">
+              {view === 'cron' ? <CronConfig /> : <MarketplacePage forcedType="skills" />}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {confirmDialog}
+    </div>
+  );
+}
 
 export function ChatPage({ view }: ChatPageProps) {
   const [query, setQuery] = useState('');
@@ -245,59 +370,24 @@ export function ChatPage({ view }: ChatPageProps) {
     return next;
   }, [historyEvents, optimisticUserEvent, streamingAssistantText, streamingAssistantTimestamp, streamingSessionEvents]);
 
-  useEffect(() => {
-    if (view !== 'chat') {
-      return;
-    }
-    if (routeSessionKey) {
-      if (selectedSessionKey !== routeSessionKey) {
-        setSelectedSessionKey(routeSessionKey);
-      }
-      return;
-    }
-    if (selectedSessionKey !== null) {
-      setSelectedSessionKey(null);
-      resetStreamState();
-    }
-  }, [resetStreamState, routeSessionKey, selectedSessionKey, view]);
+  useChatSessionSync({
+    view,
+    routeSessionKey,
+    selectedSessionKey,
+    selectedAgentId,
+    setSelectedSessionKey,
+    setSelectedAgentId,
+    selectedSessionKeyRef,
+    isUserScrollingRef,
+    resetStreamState
+  });
 
-  useEffect(() => {
-    const inferred = selectedSessionKey ? resolveAgentIdFromSessionKey(selectedSessionKey) : null;
-    if (!inferred) {
-      return;
-    }
-    if (selectedAgentId !== inferred) {
-      setSelectedAgentId(inferred);
-    }
-  }, [selectedAgentId, selectedSessionKey]);
-
-  useEffect(() => {
-    selectedSessionKeyRef.current = selectedSessionKey;
-    isUserScrollingRef.current = false;
-  }, [selectedSessionKey]);
-
-  const isNearBottom = useCallback(() => {
-    const element = threadRef.current;
-    if (!element) return true;
-    const threshold = 50;
-    return element.scrollHeight - element.scrollTop - element.clientHeight < threshold;
-  }, []);
-
-  const handleScroll = useCallback(() => {
-    if (isNearBottom()) {
-      isUserScrollingRef.current = false;
-    } else {
-      isUserScrollingRef.current = true;
-    }
-  }, [isNearBottom]);
-
-  useEffect(() => {
-    const element = threadRef.current;
-    if (!element || isUserScrollingRef.current) {
-      return;
-    }
-    element.scrollTop = element.scrollHeight;
-  }, [mergedEvents, isSending]);
+  const { handleScroll } = useChatThreadScroll({
+    threadRef,
+    isUserScrollingRef,
+    mergedEvents,
+    isSending
+  });
 
   const createNewSession = useCallback(() => {
     resetStreamState();
@@ -375,66 +465,58 @@ export function ChatPage({ view }: ChatPageProps) {
     }
   }, [location.pathname, navigate]);
 
+  const sidebarProps: ComponentProps<typeof ChatSidebar> = {
+    sessions,
+    selectedSessionKey,
+    onSelectSession: handleSelectSession,
+    onCreateSession: createNewSession,
+    sessionTitle: sessionDisplayName,
+    isLoading: sessionsQuery.isLoading,
+    query,
+    onQueryChange: setQuery
+  };
+
+  const conversationProps: ComponentProps<typeof ChatConversationPanel> = {
+    modelOptions,
+    selectedModel,
+    onSelectedModelChange: setSelectedModel,
+    skillRecords,
+    isSkillsLoading: installedSkillsQuery.isLoading,
+    selectedSkills,
+    onSelectedSkillsChange: setSelectedSkills,
+    selectedSessionKey,
+    sessionDisplayName: currentSessionDisplayName,
+    canDeleteSession: Boolean(selectedSession),
+    isDeletePending: deleteSession.isPending,
+    onDeleteSession: () => {
+      void handleDeleteSession();
+    },
+    onCreateSession: createNewSession,
+    threadRef,
+    onThreadScroll: handleScroll,
+    isHistoryLoading: historyQuery.isLoading,
+    mergedEvents,
+    isSending,
+    isAwaitingAssistantOutput,
+    streamingAssistantText,
+    draft,
+    onDraftChange: setDraft,
+    onSend: handleSend,
+    onStop: () => {
+      void stopCurrentRun();
+    },
+    canStopGeneration: canStopCurrentRun,
+    stopDisabledReason,
+    sendError: lastSendError,
+    queuedCount
+  };
+
   return (
-    <div className="h-full flex">
-      {/* Unified Chat Sidebar */}
-      <ChatSidebar
-        sessions={sessions}
-        selectedSessionKey={selectedSessionKey}
-        onSelectSession={handleSelectSession}
-        onCreateSession={createNewSession}
-        sessionTitle={sessionDisplayName}
-        isLoading={sessionsQuery.isLoading}
-        query={query}
-        onQueryChange={setQuery}
-      />
-
-      {view === 'chat' ? (
-        <ChatConversationPanel
-          modelOptions={modelOptions}
-          selectedModel={selectedModel}
-          onSelectedModelChange={setSelectedModel}
-          skillRecords={skillRecords}
-          isSkillsLoading={installedSkillsQuery.isLoading}
-          selectedSkills={selectedSkills}
-          onSelectedSkillsChange={setSelectedSkills}
-          selectedSessionKey={selectedSessionKey}
-          sessionDisplayName={currentSessionDisplayName}
-          canDeleteSession={Boolean(selectedSession)}
-          isDeletePending={deleteSession.isPending}
-          onDeleteSession={() => {
-            void handleDeleteSession();
-          }}
-          onCreateSession={createNewSession}
-          threadRef={threadRef}
-          onThreadScroll={handleScroll}
-          isHistoryLoading={historyQuery.isLoading}
-          mergedEvents={mergedEvents}
-          isSending={isSending}
-          isAwaitingAssistantOutput={isAwaitingAssistantOutput}
-          streamingAssistantText={streamingAssistantText}
-          draft={draft}
-          onDraftChange={setDraft}
-          onSend={handleSend}
-          onStop={() => {
-            void stopCurrentRun();
-          }}
-          canStopGeneration={canStopCurrentRun}
-          stopDisabledReason={stopDisabledReason}
-          sendError={lastSendError}
-          queuedCount={queuedCount}
-        />
-      ) : (
-        <section className="flex-1 min-h-0 overflow-hidden bg-gradient-to-b from-gray-50/60 to-white">
-          <div className="h-full overflow-auto custom-scrollbar">
-            <div className="mx-auto w-full max-w-[min(1120px,100%)] px-6 py-5">
-              {view === 'cron' ? <CronConfig /> : <MarketplacePage forcedType="skills" />}
-            </div>
-          </div>
-        </section>
-      )}
-
-      <ConfirmDialog />
-    </div>
+    <ChatPageLayout
+      view={view}
+      sidebarProps={sidebarProps}
+      conversationProps={conversationProps}
+      confirmDialog={<ConfirmDialog />}
+    />
   );
 }
