@@ -1,5 +1,17 @@
 # @nextclaw/ui
 
+## 0.6.0
+
+### Minor Changes
+
+- Unified minor release for accumulated architecture, engine, and chat UX updates.
+
+  Includes:
+  - New pluggable engine runtime support (Codex SDK / Claude Agent SDK)
+  - Skill-context propagation and chat interaction stability improvements
+  - Main workspace routing and conversation UX refinements
+  - Core/server/openclaw compatibility and release alignment updates
+
 ## 0.5.48
 
 ### Patch Changes
