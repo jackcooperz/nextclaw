@@ -11,6 +11,7 @@ type ChatConversationPanelProps = {
   modelOptions: ChatModelOption[];
   selectedModel: string;
   onSelectedModelChange: (value: string) => void;
+  onGoToProviders: () => void;
   skillRecords: MarketplaceInstalledRecord[];
   isSkillsLoading?: boolean;
   selectedSkills: string[];
@@ -42,6 +43,7 @@ export function ChatConversationPanel({
   modelOptions,
   selectedModel,
   onSelectedModelChange,
+  onGoToProviders,
   skillRecords,
   isSkillsLoading = false,
   selectedSkills,
@@ -69,12 +71,19 @@ export function ChatConversationPanel({
   queuedCount,
 }: ChatConversationPanelProps) {
   const showWelcome = !selectedSessionKey && mergedEvents.length === 0;
+  const hasConfiguredModel = modelOptions.length > 0;
   const hideEmptyHint =
     isHistoryLoading &&
     mergedEvents.length === 0 &&
     !isSending &&
     !isAwaitingAssistantOutput &&
     !streamingAssistantText.trim();
+  const shouldShowProviderSetup =
+    !hasConfiguredModel &&
+    !selectedSessionKey &&
+    mergedEvents.length === 0 &&
+    !hideEmptyHint &&
+    !isSending;
 
   return (
     <section className="flex-1 min-h-0 flex flex-col overflow-hidden bg-gradient-to-b from-gray-50/60 to-white">
@@ -98,10 +107,35 @@ export function ChatConversationPanel({
         </div>
       )}
 
+      {!hasConfiguredModel && !showWelcome && (
+        <div className="px-5 py-2.5 border-b border-amber-200/70 bg-amber-50/70 flex items-center justify-between gap-3 shrink-0">
+          <span className="text-xs text-amber-800">{t('chatModelNoOptions')}</span>
+          <button
+            type="button"
+            onClick={onGoToProviders}
+            className="text-xs font-semibold text-amber-900 underline-offset-2 hover:underline"
+          >
+            {t('chatGoConfigureProvider')}
+          </button>
+        </div>
+      )}
+
       {/* Message thread or welcome */}
       <div ref={threadRef} onScroll={onThreadScroll} className="flex-1 min-h-0 overflow-y-auto custom-scrollbar">
         {showWelcome ? (
-          <ChatWelcome onCreateSession={onCreateSession} />
+          shouldShowProviderSetup ? (
+            <div className="h-full flex items-center justify-center p-8">
+              <div className="w-full max-w-xl rounded-2xl border border-amber-200 bg-amber-50/70 p-6 text-center">
+                <h2 className="text-lg font-semibold text-amber-900">{t('chatProviderSetupTitle')}</h2>
+                <p className="mt-2 text-sm text-amber-800">{t('chatProviderSetupDescription')}</p>
+                <Button className="mt-4" onClick={onGoToProviders}>
+                  {t('chatGoConfigureProvider')}
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <ChatWelcome onCreateSession={onCreateSession} />
+          )
         ) : hideEmptyHint ? (
           <div className="h-full" />
         ) : mergedEvents.length === 0 ? (
@@ -119,6 +153,7 @@ export function ChatConversationPanel({
         onDraftChange={onDraftChange}
         onSend={onSend}
         onStop={onStop}
+        onGoToProviders={onGoToProviders}
         canStopGeneration={canStopGeneration}
         stopDisabledReason={stopDisabledReason}
         sendError={sendError}

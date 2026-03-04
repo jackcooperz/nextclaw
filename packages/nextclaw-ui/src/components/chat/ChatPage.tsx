@@ -397,6 +397,12 @@ export function ChatPage({ view }: ChatPageProps) {
     }
   }, [location.pathname, navigate, resetStreamState]);
 
+  const goToProviders = useCallback(() => {
+    if (location.pathname !== '/providers') {
+      navigate('/providers');
+    }
+  }, [location.pathname, navigate]);
+
   const handleDeleteSession = useCallback(async () => {
     if (!selectedSessionKey) {
       return;
@@ -480,6 +486,7 @@ export function ChatPage({ view }: ChatPageProps) {
     modelOptions,
     selectedModel,
     onSelectedModelChange: setSelectedModel,
+    onGoToProviders: goToProviders,
     skillRecords,
     isSkillsLoading: installedSkillsQuery.isLoading,
     selectedSkills,

@@ -1,5 +1,11 @@
 # @nextclaw/ui
 
+## 0.6.1
+
+### Patch Changes
+
+- Release frontend UI changes only.
+
 ## 0.6.0
 
 ### Minor Changes

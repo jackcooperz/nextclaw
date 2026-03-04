@@ -487,7 +487,13 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   chatSelectAgent: { zh: '选择 Agent', en: 'Select Agent' },
   chatModelLabel: { zh: '对话模型', en: 'Chat Model' },
   chatSelectModel: { zh: '选择模型', en: 'Select model' },
-  chatModelNoOptions: { zh: '暂无可用模型，请先配置 Provider。', en: 'No available models. Configure a provider first.' },
+  chatModelNoOptions: { zh: '暂无可用模型，请先配置提供商。', en: 'No available models. Configure a provider first.' },
+  chatGoConfigureProvider: { zh: '去配置提供商', en: 'Go to Providers' },
+  chatProviderSetupTitle: { zh: '开始前先配置提供商', en: 'Configure a Provider First' },
+  chatProviderSetupDescription: {
+    zh: '你还没有可用模型。先在提供商页面配置并保存至少一个 Provider 后，再回来开始对话。',
+    en: 'No models are available yet. Configure and save at least one provider, then return to start chatting.'
+  },
   chatSessionLabel: { zh: '当前会话', en: 'Current Session' },
   chatNoSession: { zh: '未选择会话', en: 'No session selected' },
   chatNoSessionHint: { zh: '创建一个会话并发送第一条消息。', en: 'Create a session and send your first message.' },

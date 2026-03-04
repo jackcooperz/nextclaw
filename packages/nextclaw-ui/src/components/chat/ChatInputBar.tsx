@@ -17,6 +17,7 @@ type ChatInputBarProps = {
   onDraftChange: (value: string) => void;
   onSend: () => Promise<void> | void;
   onStop: () => Promise<void> | void;
+  onGoToProviders: () => void;
   canStopGeneration: boolean;
   stopDisabledReason?: string | null;
   sendError?: string | null;
@@ -36,6 +37,7 @@ export function ChatInputBar({
   onDraftChange,
   onSend,
   onStop,
+  onGoToProviders,
   canStopGeneration,
   stopDisabledReason = null,
   sendError = null,
@@ -49,6 +51,8 @@ export function ChatInputBar({
   selectedSkills,
   onSelectedSkillsChange
 }: ChatInputBarProps) {
+  const hasModelOptions = modelOptions.length > 0;
+  const inputDisabled = !hasModelOptions && !isSending;
   const selectedModelOption = modelOptions.find((option) => option.value === selectedModel);
   const resolvedStopHint =
     stopDisabledReason === '__preparing__'
@@ -70,6 +74,7 @@ export function ChatInputBar({
           <textarea
             value={draft}
             onChange={(e) => onDraftChange(e.target.value)}
+            disabled={inputDisabled}
             onKeyDown={(e) => {
               if (e.key === 'Escape' && isSending && canStopGeneration) {
                 e.preventDefault();
@@ -81,9 +86,23 @@ export function ChatInputBar({
                 void onSend();
               }
             }}
-            placeholder={t('chatInputPlaceholder')}
+            placeholder={hasModelOptions ? t('chatInputPlaceholder') : t('chatModelNoOptions')}
             className="w-full min-h-[68px] max-h-[220px] resize-y bg-transparent outline-none text-sm px-4 py-3 text-gray-800 placeholder:text-gray-400"
           />
+          {!hasModelOptions && (
+            <div className="px-4 pb-2">
+              <div className="inline-flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs text-amber-800">
+                <span>{t('chatModelNoOptions')}</span>
+                <button
+                  type="button"
+                  onClick={onGoToProviders}
+                  className="font-semibold text-amber-900 underline-offset-2 hover:underline"
+                >
+                  {t('chatGoConfigureProvider')}
+                </button>
+              </div>
+            </div>
+          )}
           {selectedSkillRecords.length > 0 && (
             <div className="px-4 pb-2">
               <div className="flex flex-wrap items-center gap-2">
@@ -116,9 +135,9 @@ export function ChatInputBar({
 
               {/* Model selector */}
               <Select
-                value={modelOptions.length > 0 ? selectedModel : undefined}
+                value={hasModelOptions ? selectedModel : undefined}
                 onValueChange={onSelectedModelChange}
-                disabled={modelOptions.length === 0}
+                disabled={!hasModelOptions}
               >
                 <SelectTrigger className="h-8 w-auto min-w-[220px] rounded-lg border-0 bg-transparent shadow-none text-xs font-medium text-gray-600 hover:bg-gray-100 focus:ring-0 px-3">
                   {selectedModelOption ? (
@@ -210,7 +229,7 @@ export function ChatInputBar({
                   size="sm"
                   className="rounded-lg"
                   onClick={() => void onSend()}
-                  disabled={draft.trim().length === 0}
+                  disabled={draft.trim().length === 0 || !hasModelOptions}
                 >
                   <Send className="h-3.5 w-3.5 mr-1.5" />
                   {t('chatSend')}
