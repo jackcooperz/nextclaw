@@ -8,6 +8,9 @@ import type {
   ProviderConfigUpdate,
   ProviderConnectionTestRequest,
   ProviderConnectionTestResult,
+  ProviderAuthStartResult,
+  ProviderAuthPollRequest,
+  ProviderAuthPollResult,
   ProviderCreateRequest,
   ProviderCreateResult,
   ProviderDeleteResult,
@@ -121,6 +124,33 @@ export async function testProviderConnection(
 ): Promise<ProviderConnectionTestResult> {
   const response = await api.post<ProviderConnectionTestResult>(
     `/api/config/providers/${provider}/test`,
+    data
+  );
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+}
+
+// POST /api/config/providers/:provider/auth/start
+export async function startProviderAuth(provider: string): Promise<ProviderAuthStartResult> {
+  const response = await api.post<ProviderAuthStartResult>(
+    `/api/config/providers/${provider}/auth/start`,
+    {}
+  );
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+}
+
+// POST /api/config/providers/:provider/auth/poll
+export async function pollProviderAuth(
+  provider: string,
+  data: ProviderAuthPollRequest
+): Promise<ProviderAuthPollResult> {
+  const response = await api.post<ProviderAuthPollResult>(
+    `/api/config/providers/${provider}/auth/poll`,
     data
   );
   if (!response.ok) {

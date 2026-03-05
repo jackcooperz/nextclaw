@@ -470,6 +470,13 @@ export function buildConfigMeta(config: Config): ConfigMetaView {
       defaultApiBase: spec.defaultApiBase,
       logo: spec.logo,
       apiBaseHelp: spec.apiBaseHelp,
+      auth: spec.auth
+        ? {
+            kind: spec.auth.kind,
+            displayName: spec.auth.displayName,
+            note: spec.auth.note
+          }
+        : undefined,
       defaultModels: normalizeModelList(spec.defaultModels ?? []),
       supportsWireApi: spec.supportsWireApi,
       wireApiOptions: spec.wireApiOptions,
@@ -507,6 +514,7 @@ export function buildConfigMeta(config: Config): ConfigMetaView {
         defaultApiBase: undefined,
         logo: undefined,
         apiBaseHelp: undefined,
+        auth: undefined,
         defaultModels: [],
         supportsWireApi: true,
         wireApiOptions: CUSTOM_PROVIDER_WIRE_API_OPTIONS,

@@ -21,6 +21,7 @@ import {
   patchSession,
   deleteSession
 } from "./config.js";
+import { pollProviderAuth, startProviderAuth } from "./provider-auth.js";
 import type {
   ChatRunListView,
   ChatRunState,
@@ -52,6 +53,8 @@ import type {
   CronActionResult,
   CronJobView,
   ProviderConnectionTestRequest,
+  ProviderAuthPollResult,
+  ProviderAuthStartResult,
   ProviderCreateRequest,
   ProviderCreateResult,
   ProviderDeleteResult,
@@ -1797,6 +1800,45 @@ export function createUiRouter(options: UiRouterOptions): Hono {
       return c.json(err("NOT_FOUND", `unknown provider: ${provider}`), 404);
     }
     return c.json(ok(result));
+  });
+
+  app.post("/api/config/providers/:provider/auth/start", async (c) => {
+    const provider = c.req.param("provider");
+    try {
+      const result = await startProviderAuth(options.configPath, provider);
+      if (!result) {
+        return c.json(err("NOT_SUPPORTED", `provider auth is not supported: ${provider}`), 404);
+      }
+      return c.json(ok(result satisfies ProviderAuthStartResult));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return c.json(err("AUTH_START_FAILED", message), 400);
+    }
+  });
+
+  app.post("/api/config/providers/:provider/auth/poll", async (c) => {
+    const provider = c.req.param("provider");
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const sessionId = typeof body.data.sessionId === "string" ? body.data.sessionId.trim() : "";
+    if (!sessionId) {
+      return c.json(err("INVALID_BODY", "sessionId is required"), 400);
+    }
+
+    const result = await pollProviderAuth({
+      configPath: options.configPath,
+      providerName: provider,
+      sessionId
+    });
+    if (!result) {
+      return c.json(err("NOT_FOUND", "provider auth session not found"), 404);
+    }
+    if (result.status === "authorized") {
+      options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
+    }
+    return c.json(ok(result satisfies ProviderAuthPollResult));
   });
 
   app.put("/api/config/channels/:channel", async (c) => {

@@ -1,9 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useConfig,
   useConfigMeta,
   useConfigSchema,
   useDeleteProvider,
+  usePollProviderAuth,
+  useStartProviderAuth,
   useTestProviderConnection,
   useUpdateProvider
 } from '@/hooks/useConfig';
@@ -138,12 +141,15 @@ function serializeModelsForSave(models: string[], defaultModels: string[]): stri
 }
 
 export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormProps) {
+  const queryClient = useQueryClient();
   const { data: config } = useConfig();
   const { data: meta } = useConfigMeta();
   const { data: schema } = useConfigSchema();
   const updateProvider = useUpdateProvider();
   const deleteProvider = useDeleteProvider();
   const testProviderConnection = useTestProviderConnection();
+  const startProviderAuth = useStartProviderAuth();
+  const pollProviderAuth = usePollProviderAuth();
 
   const [apiKey, setApiKey] = useState('');
   const [apiBase, setApiBase] = useState('');
@@ -154,6 +160,9 @@ export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormPr
   const [providerDisplayName, setProviderDisplayName] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showModelInput, setShowModelInput] = useState(false);
+  const [authSessionId, setAuthSessionId] = useState<string | null>(null);
+  const [authStatusMessage, setAuthStatusMessage] = useState('');
+  const authPollTimerRef = useRef<number | null>(null);
 
   const providerSpec = meta?.providers.find((p) => p.name === providerName);
   const providerConfig = providerName ? config?.providers[providerName] : null;
@@ -202,6 +211,60 @@ export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormPr
     providerSpec?.apiBaseHelp?.en ||
     apiBaseHint?.help ||
     t('providerApiBaseHelp');
+  const providerAuth = providerSpec?.auth;
+  const providerAuthNote =
+    providerAuth?.note?.[language] ||
+    providerAuth?.note?.en ||
+    providerAuth?.displayName ||
+    '';
+
+  const clearAuthPollTimer = useCallback(() => {
+    if (authPollTimerRef.current !== null) {
+      window.clearTimeout(authPollTimerRef.current);
+      authPollTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleProviderAuthPoll = useCallback((sessionId: string, delayMs: number) => {
+    clearAuthPollTimer();
+    authPollTimerRef.current = window.setTimeout(() => {
+      void (async () => {
+        if (!providerName) {
+          return;
+        }
+        try {
+          const result = await pollProviderAuth.mutateAsync({
+            provider: providerName,
+            data: { sessionId }
+          });
+          if (result.status === 'pending') {
+            setAuthStatusMessage('Waiting for browser authorization...');
+            scheduleProviderAuthPoll(sessionId, result.nextPollMs ?? delayMs);
+            return;
+          }
+          if (result.status === 'authorized') {
+            setAuthSessionId(null);
+            clearAuthPollTimer();
+            setAuthStatusMessage('Authorization completed.');
+            toast.success('Provider authorization completed.');
+            queryClient.invalidateQueries({ queryKey: ['config'] });
+            queryClient.invalidateQueries({ queryKey: ['config-meta'] });
+            return;
+          }
+          setAuthSessionId(null);
+          clearAuthPollTimer();
+          setAuthStatusMessage(result.message || `Authorization ${result.status}.`);
+          toast.error(result.message || `Authorization ${result.status}.`);
+        } catch (error) {
+          setAuthSessionId(null);
+          clearAuthPollTimer();
+          const message = error instanceof Error ? error.message : String(error);
+          setAuthStatusMessage(message);
+          toast.error(`Authorization failed: ${message}`);
+        }
+      })();
+    }, Math.max(1000, delayMs));
+  }, [clearAuthPollTimer, pollProviderAuth, providerName, queryClient]);
 
   useEffect(() => {
     if (!providerName) {
@@ -212,6 +275,9 @@ export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormPr
       setModels([]);
       setModelDraft('');
       setProviderDisplayName('');
+      setAuthSessionId(null);
+      setAuthStatusMessage('');
+      clearAuthPollTimer();
       return;
     }
 
@@ -222,7 +288,12 @@ export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormPr
     setModels(currentEditableModels);
     setModelDraft('');
     setProviderDisplayName(effectiveDisplayName);
-  }, [providerName, currentApiBase, providerConfig?.extraHeaders, currentWireApi, currentEditableModels, effectiveDisplayName]);
+    setAuthSessionId(null);
+    setAuthStatusMessage('');
+    clearAuthPollTimer();
+  }, [providerName, currentApiBase, providerConfig?.extraHeaders, currentWireApi, currentEditableModels, effectiveDisplayName, clearAuthPollTimer]);
+
+  useEffect(() => () => clearAuthPollTimer(), [clearAuthPollTimer]);
 
   const hasChanges = useMemo(() => {
     if (!providerName) {
@@ -362,6 +433,30 @@ export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormPr
     }
   };
 
+  const handleStartProviderAuth = async () => {
+    if (!providerName || providerAuth?.kind !== 'device_code') {
+      return;
+    }
+
+    try {
+      setAuthStatusMessage('');
+      const result = await startProviderAuth.mutateAsync({ provider: providerName });
+      if (!result.sessionId || !result.verificationUri) {
+        throw new Error('Provider did not return a valid auth session.');
+      }
+      setAuthSessionId(result.sessionId);
+      setAuthStatusMessage(`Open browser and complete authorization (code: ${result.userCode}).`);
+      window.open(result.verificationUri, '_blank', 'noopener,noreferrer');
+      scheduleProviderAuthPoll(result.sessionId, result.intervalMs);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      setAuthSessionId(null);
+      clearAuthPollTimer();
+      setAuthStatusMessage(message);
+      toast.error(`Failed to start authorization: ${message}`);
+    }
+  };
+
   if (!providerName || !providerSpec || !providerConfig) {
     return (
       <div className={CONFIG_EMPTY_DETAIL_CARD_CLASS}>
@@ -430,6 +525,38 @@ export function ProviderForm({ providerName, onProviderDeleted }: ProviderFormPr
             />
             <p className="text-xs text-gray-500">{t('leaveBlankToKeepUnchanged')}</p>
           </div>
+
+          {providerAuth?.kind === 'device_code' && (
+            <div className="space-y-2 rounded-xl border border-primary/20 bg-primary-50/50 p-3">
+              <Label className="text-sm font-medium text-gray-900">
+                {providerAuth.displayName || 'Provider Authorization'}
+              </Label>
+              {providerAuthNote ? (
+                <p className="text-xs text-gray-600">{providerAuthNote}</p>
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleStartProviderAuth}
+                  disabled={startProviderAuth.isPending || Boolean(authSessionId)}
+                >
+                  {startProviderAuth.isPending
+                    ? 'Starting...'
+                    : authSessionId
+                      ? 'Authorizing...'
+                      : 'Authorize in Browser'}
+                </Button>
+                {authSessionId ? (
+                  <span className="text-xs text-gray-500">Session: {authSessionId.slice(0, 8)}…</span>
+                ) : null}
+              </div>
+              {authStatusMessage ? (
+                <p className="text-xs text-gray-600">{authStatusMessage}</p>
+              ) : null}
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="apiBase" className="text-sm font-medium text-gray-900">

@@ -263,4 +263,114 @@ describe("provider connection test route", () => {
     };
     expect(configAfterDeletePayload.data.providers[customProviderName]).toBeUndefined();
   });
+
+  it("exposes qwen-portal auth metadata in provider meta", async () => {
+    const configPath = createTempConfigPath();
+    saveConfig(ConfigSchema.parse({}), configPath);
+
+    const app = createUiRouter({
+      configPath,
+      publish: () => {}
+    });
+
+    const metaResponse = await app.request("http://localhost/api/config/meta");
+    expect(metaResponse.status).toBe(200);
+    const metaPayload = await metaResponse.json() as {
+      ok: true;
+      data: {
+        providers: Array<{
+          name: string;
+          auth?: {
+            kind: string;
+          };
+        }>;
+      };
+    };
+    const qwenPortal = metaPayload.data.providers.find((provider) => provider.name === "qwen-portal");
+    expect(qwenPortal).toBeDefined();
+    expect(qwenPortal?.auth?.kind).toBe("device_code");
+  });
+
+  it("completes qwen-portal device auth and stores access token", async () => {
+    const configPath = createTempConfigPath();
+    saveConfig(ConfigSchema.parse({}), configPath);
+
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        device_code: "device-code-123",
+        user_code: "ABCD-EFGH",
+        verification_uri: "https://chat.qwen.ai/device",
+        verification_uri_complete: "https://chat.qwen.ai/device?code=ABCD-EFGH",
+        expires_in: 600,
+        interval: 2
+      }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json"
+        }
+      }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({
+        access_token: "qwen-access-token",
+        refresh_token: "qwen-refresh-token",
+        expires_in: 3600
+      }), {
+        status: 200,
+        headers: {
+          "content-type": "application/json"
+        }
+      }));
+
+    const app = createUiRouter({
+      configPath,
+      publish: () => {}
+    });
+
+    const startResponse = await app.request("http://localhost/api/config/providers/qwen-portal/auth/start", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({})
+    });
+    expect(startResponse.status).toBe(200);
+    const startPayload = await startResponse.json() as {
+      ok: true;
+      data: {
+        sessionId: string;
+      };
+    };
+    const sessionId = startPayload.data.sessionId;
+    expect(sessionId).toBeTruthy();
+
+    const pollResponse = await app.request("http://localhost/api/config/providers/qwen-portal/auth/poll", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json"
+      },
+      body: JSON.stringify({
+        sessionId
+      })
+    });
+    expect(pollResponse.status).toBe(200);
+    const pollPayload = await pollResponse.json() as {
+      ok: true;
+      data: {
+        status: string;
+      };
+    };
+    expect(pollPayload.data.status).toBe("authorized");
+
+    const configResponse = await app.request("http://localhost/api/config");
+    expect(configResponse.status).toBe(200);
+    const configPayload = await configResponse.json() as {
+      ok: true;
+      data: {
+        providers: Record<string, { apiKeySet: boolean; apiBase?: string | null }>;
+      };
+    };
+    expect(configPayload.data.providers["qwen-portal"]?.apiKeySet).toBe(true);
+    expect(configPayload.data.providers["qwen-portal"]?.apiBase).toBe("https://portal.qwen.ai/v1");
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
 });

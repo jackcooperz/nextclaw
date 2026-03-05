@@ -5,6 +5,21 @@ export type LocalizedText = {
   zh?: string;
 };
 
+export type ProviderDeviceCodeAuthSpec = {
+  kind: "device_code";
+  displayName?: string;
+  baseUrl: string;
+  deviceCodePath: string;
+  tokenPath: string;
+  clientId: string;
+  scope: string;
+  grantType: string;
+  usePkce?: boolean;
+  note?: LocalizedText;
+};
+
+export type ProviderAuthSpec = ProviderDeviceCodeAuthSpec;
+
 export type ProviderSpec = {
   name: string;
   keywords: string[];
@@ -27,6 +42,7 @@ export type ProviderSpec = {
   defaultWireApi?: WireApiMode;
   logo?: string;
   apiBaseHelp?: LocalizedText;
+  auth?: ProviderAuthSpec;
 };
 
 export type ProviderCatalogPlugin = {

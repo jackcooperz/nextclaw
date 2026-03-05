@@ -8,6 +8,8 @@ import {
   deleteProvider,
   updateProvider,
   testProviderConnection,
+  startProviderAuth,
+  pollProviderAuth,
   updateChannel,
   updateRuntime,
   updateSecrets,
@@ -122,6 +124,19 @@ export function useTestProviderConnection() {
   return useMutation({
     mutationFn: ({ provider, data }: { provider: string; data: unknown }) =>
       testProviderConnection(provider, data as Parameters<typeof testProviderConnection>[1])
+  });
+}
+
+export function useStartProviderAuth() {
+  return useMutation({
+    mutationFn: ({ provider }: { provider: string }) => startProviderAuth(provider)
+  });
+}
+
+export function usePollProviderAuth() {
+  return useMutation({
+    mutationFn: ({ provider, data }: { provider: string; data: unknown }) =>
+      pollProviderAuth(provider, data as Parameters<typeof pollProviderAuth>[1])
   });
 }
 

@@ -69,6 +69,28 @@ export type ProviderConnectionTestResult = {
   hint?: string;
 };
 
+export type ProviderAuthStartResult = {
+  provider: string;
+  kind: "device_code";
+  sessionId: string;
+  verificationUri: string;
+  userCode: string;
+  expiresAt: string;
+  intervalMs: number;
+  note?: string;
+};
+
+export type ProviderAuthPollRequest = {
+  sessionId: string;
+};
+
+export type ProviderAuthPollResult = {
+  provider: string;
+  status: "pending" | "authorized" | "denied" | "expired" | "error";
+  message?: string;
+  nextPollMs?: number;
+};
+
 export type AgentProfileView = {
   id: string;
   default?: boolean;
@@ -398,6 +420,14 @@ export type ProviderSpecView = {
   apiBaseHelp?: {
     en?: string;
     zh?: string;
+  };
+  auth?: {
+    kind: "device_code";
+    displayName?: string;
+    note?: {
+      en?: string;
+      zh?: string;
+    };
   };
   defaultModels?: string[];
   supportsWireApi?: boolean;

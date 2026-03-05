@@ -197,6 +197,39 @@ export const builtinProviderPlugin: ProviderCatalogPlugin = {
       logo: "dashscope.png"
     },
     {
+      name: "qwen-portal",
+      keywords: ["qwen-portal", "qwen"],
+      envKey: "QWEN_PORTAL_TOKEN",
+      displayName: "Qwen Portal",
+      modelPrefix: "qwen-portal",
+      litellmPrefix: "qwen-portal",
+      skipPrefixes: ["qwen-portal/"],
+      envExtras: [],
+      isGateway: false,
+      isLocal: false,
+      detectByKeyPrefix: "",
+      detectByBaseKeyword: "portal.qwen.ai",
+      defaultApiBase: "https://portal.qwen.ai/v1",
+      defaultModels: ["qwen-portal/coder-model", "qwen-portal/vision-model"],
+      stripModelPrefix: false,
+      modelOverrides: [],
+      auth: {
+        kind: "device_code",
+        displayName: "Qwen OAuth",
+        baseUrl: "https://chat.qwen.ai",
+        deviceCodePath: "/api/v1/oauth2/device/code",
+        tokenPath: "/api/v1/oauth2/token",
+        clientId: "f0304373b74a44d2b584a3fb70ca9e56",
+        scope: "openid profile email model.completion",
+        grantType: "urn:ietf:params:oauth:grant-type:device_code",
+        usePkce: true,
+        note: {
+          zh: "通过浏览器登录 Qwen 后即可在 NextClaw 中使用该 Provider。",
+          en: "Log in to Qwen in your browser, then use this provider in NextClaw."
+        }
+      }
+    },
+    {
       name: "moonshot",
       keywords: ["moonshot", "kimi"],
       envKey: "MOONSHOT_API_KEY",
