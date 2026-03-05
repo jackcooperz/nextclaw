@@ -7,5 +7,6 @@
 - `/commit`: 进行提交操作（提交信息需使用英文）。
 - `/validate`: 对项目进行验证，至少运行 `build`、`lint`、`tsc`，必要时补充冒烟测试。执行前需确认验证范围和可跳过项。
 - `/release-frontend`: 前端一键发布（仅 UI 变更场景）。输入：`/release-frontend`。输出：生成 UI changeset，并执行 `pnpm release:version` + `pnpm release:publish`，最终发布 `@nextclaw/ui` 与 `nextclaw`。
+- `pnpm deploy:llm-api-worker`: LLM API Worker 一键部署命令。输入：`DASHSCOPE_API_KEY=*** pnpm deploy:llm-api-worker`（或 `pnpm deploy:llm-api-worker -- --api-key ***`）。输出：自动更新 Cloudflare secret `DASHSCOPE_API_KEY` 并部署 `nextclaw-provider-gateway-api`。
 
 （后续指令在此追加，保持格式一致。） 

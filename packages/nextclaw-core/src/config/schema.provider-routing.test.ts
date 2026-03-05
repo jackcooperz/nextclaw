@@ -2,6 +2,19 @@ import { describe, expect, it } from "vitest";
 import { ConfigSchema, getApiBase, getProviderName } from "./schema.js";
 
 describe("provider apiBase routing", () => {
+  it("uses built-in nextclaw provider when prefixed provider has no apiKey", () => {
+    const config = ConfigSchema.parse({
+      providers: {
+        nextclaw: {
+          apiKey: "nc_free_test_key"
+        }
+      }
+    });
+
+    expect(getProviderName(config, "dashscope/qwen3.5-flash")).toBe("nextclaw");
+    expect(getApiBase(config, "dashscope/qwen3.5-flash")).toBe("https://ai-gateway-api.nextclaw.io/v1");
+  });
+
   it("uses provider default api base for non-gateway providers when apiBase is unset", () => {
     const config = ConfigSchema.parse({
       providers: {

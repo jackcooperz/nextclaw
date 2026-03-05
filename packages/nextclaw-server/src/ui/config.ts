@@ -41,6 +41,7 @@ import type {
 const MASK_MIN_LENGTH = 8;
 const EXTRA_SENSITIVE_PATH_PATTERNS = [/authorization/i, /cookie/i, /session/i, /bearer/i];
 const PROVIDER_TEST_MODEL_FALLBACKS: Record<string, string> = {
+  nextclaw: "dashscope/qwen3.5-flash",
   openai: "gpt-5-mini",
   deepseek: "deepseek-chat",
   gemini: "gemini-3-flash-preview",
@@ -55,6 +56,7 @@ const PROVIDER_TEST_MODEL_FALLBACKS: Record<string, string> = {
 };
 
 const PREFERRED_PROVIDER_ORDER = [
+  "nextclaw",
   "openai",
   "anthropic",
   "gemini",

@@ -24,6 +24,29 @@ export type ProviderSpec = {
 
 export const PROVIDERS: ProviderSpec[] = [
   {
+    name: "nextclaw",
+    keywords: ["nextclaw", "dashscope/", "qwen3.5", "qwen"],
+    envKey: "NEXTCLAW_API_KEY",
+    displayName: "NextClaw Built-in",
+    modelPrefix: "nextclaw",
+    litellmPrefix: "nextclaw",
+    skipPrefixes: [],
+    envExtras: [],
+    isGateway: true,
+    isLocal: false,
+    detectByKeyPrefix: "nc_free_",
+    detectByBaseKeyword: "nextclaw.io",
+    defaultApiBase: "https://ai-gateway-api.nextclaw.io/v1",
+    defaultModels: [
+      "dashscope/qwen3.5-plus",
+      "dashscope/qwen3.5-flash",
+      "dashscope/qwen3.5-122b-a10b",
+      "dashscope/qwen3.5-35b-a3b"
+    ],
+    stripModelPrefix: false,
+    modelOverrides: []
+  },
+  {
     name: "openrouter",
     keywords: ["openrouter"],
     envKey: "OPENROUTER_API_KEY",

@@ -194,7 +194,7 @@ export const ChannelsConfigSchema = z.object({
 
 export const AgentDefaultsSchema = z.object({
   workspace: z.string().default(DEFAULT_WORKSPACE_PATH),
-  model: z.string().default("anthropic/claude-opus-4-5"),
+  model: z.string().default("dashscope/qwen3.5-flash"),
   engine: z.string().default("native"),
   engineConfig: z.record(z.unknown()).default({}),
   contextTokens: z.number().int().min(1000).default(200000),
@@ -282,6 +282,7 @@ export const ProviderConfigSchema = z.object({
 });
 
 export const ProvidersConfigSchema = z.object({
+  nextclaw: ProviderConfigSchema.default({}),
   anthropic: ProviderConfigSchema.default({}),
   openai: ProviderConfigSchema.default({}),
   openrouter: ProviderConfigSchema.default({}),
@@ -440,10 +441,15 @@ export function matchProvider(config: Config, model?: string): { provider: Provi
   const modelLower = rawModel.toLowerCase();
   const slashIndex = modelLower.indexOf("/");
   const modelPrefix = slashIndex >= 0 ? modelLower.slice(0, slashIndex) : "";
+  let prefixedMatch: { provider: ProviderConfig; name: string } | null = null;
   if (modelPrefix) {
     for (const [name, provider] of Object.entries(providers)) {
       if (name.toLowerCase() === modelPrefix) {
-        return { provider, name };
+        prefixedMatch = { provider, name };
+        if (provider.apiKey) {
+          return prefixedMatch;
+        }
+        break;
       }
     }
   }
@@ -468,6 +474,9 @@ export function matchProvider(config: Config, model?: string): { provider: Provi
     if (provider.apiKey) {
       return { provider, name };
     }
+  }
+  if (prefixedMatch) {
+    return prefixedMatch;
   }
   return { provider: null, name: null };
 }

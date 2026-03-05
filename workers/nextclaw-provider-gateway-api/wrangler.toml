@@ -1,0 +1,19 @@
+name = "nextclaw-provider-gateway-api"
+main = "src/main.ts"
+compatibility_date = "2026-03-05"
+
+[observability]
+enabled = true
+
+[[durable_objects.bindings]]
+name = "NEXTCLAW_QUOTA"
+class_name = "NextclawQuotaDurableObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["NextclawQuotaDurableObject"]
+
+[vars]
+DASHSCOPE_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+FREE_TRIAL_USD_LIMIT = "0.50"
+FREE_TRIAL_FLAT_USD_PER_REQUEST = "0.0002"
