@@ -60,6 +60,8 @@ type UiChatRunCoordinatorOptions = {
 
 const RUNS_DIR = join(getDataDir(), "runs");
 const NON_TERMINAL_STATES = new Set<ChatRunState>(["queued", "running"]);
+const DEFAULT_SESSION_TYPE = "native";
+const SESSION_TYPE_METADATA_KEY = "session_type";
 
 function createRunId(): string {
   const now = Date.now().toString(36);
@@ -110,6 +112,8 @@ export class UiChatRunCoordinator {
 
   startRun(input: ChatTurnRequest): ChatRunView {
     const request = this.resolveRequest(input);
+    const resolvedSessionType = this.resolveSessionTypeForRun(request.sessionKey, request.metadata);
+    request.metadata[SESSION_TYPE_METADATA_KEY] = resolvedSessionType;
     const stopCapability = this.options.runtimePool.supportsTurnAbort({
       sessionKey: request.sessionKey,
       agentId: request.agentId,
@@ -285,6 +289,65 @@ export class UiChatRunCoordinator {
       channel: readOptionalString(input.channel) ?? "ui",
       chatId: readOptionalString(input.chatId) ?? "web-ui"
     };
+  }
+
+  private readRequestedSessionType(metadata: Record<string, unknown>): string | undefined {
+    const value = readOptionalString(metadata.session_type) ?? readOptionalString(metadata.sessionType);
+    return value ? value.toLowerCase() : undefined;
+  }
+
+  private readStoredSessionType(metadata: Record<string, unknown>): string {
+    const value = readOptionalString(metadata[SESSION_TYPE_METADATA_KEY]);
+    return value ? value.toLowerCase() : DEFAULT_SESSION_TYPE;
+  }
+
+  private countUserMessages(session: { messages: Array<{ role?: unknown }> }): number {
+    return session.messages.reduce((count, message) => {
+      const role = typeof message.role === "string" ? message.role.trim().toLowerCase() : "";
+      return role === "user" ? count + 1 : count;
+    }, 0);
+  }
+
+  private ensureSessionTypeAvailable(sessionType: string): void {
+    const available = new Set(this.options.runtimePool.listAvailableEngineKinds());
+    available.add(DEFAULT_SESSION_TYPE);
+    if (!available.has(sessionType)) {
+      throw new Error(
+        `session type "${sessionType}" is unavailable. Re-enable the related plugin or create a native session.`
+      );
+    }
+  }
+
+  private resolveSessionTypeForRun(sessionKey: string, metadata: Record<string, unknown>): string {
+    const requestedType = this.readRequestedSessionType(metadata);
+    const session = this.options.sessionManager.getOrCreate(sessionKey);
+    const storedType = this.readStoredSessionType(session.metadata);
+    const userMessageCount = this.countUserMessages(session);
+    const locked = userMessageCount > 0;
+
+    if (locked) {
+      if (requestedType && requestedType !== storedType) {
+        throw new Error(
+          `session type is locked to "${storedType}" after the first user message; create a new session to switch type`
+        );
+      }
+      this.ensureSessionTypeAvailable(storedType);
+      if (session.metadata[SESSION_TYPE_METADATA_KEY] !== storedType) {
+        session.metadata[SESSION_TYPE_METADATA_KEY] = storedType;
+        session.updatedAt = new Date();
+        this.options.sessionManager.save(session);
+      }
+      return storedType;
+    }
+
+    const nextType = requestedType ?? storedType;
+    this.ensureSessionTypeAvailable(nextType);
+    if (session.metadata[SESSION_TYPE_METADATA_KEY] !== nextType) {
+      session.metadata[SESSION_TYPE_METADATA_KEY] = nextType;
+      session.updatedAt = new Date();
+      this.options.sessionManager.save(session);
+    }
+    return nextType;
   }
 
   private async executeRun(run: ChatRunRecord, request: ResolvedTurnRequest): Promise<void> {

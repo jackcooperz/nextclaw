@@ -146,6 +146,8 @@ export type SessionEntryView = {
   updatedAt: string;
   label?: string;
   preferredModel?: string;
+  sessionType: string;
+  sessionTypeMutable: boolean;
   messageCount: number;
   lastRole?: string;
   lastTimestamp?: string;
@@ -177,6 +179,8 @@ export type SessionHistoryView = {
   key: string;
   totalMessages: number;
   totalEvents: number;
+  sessionType: string;
+  sessionTypeMutable: boolean;
   metadata: Record<string, unknown>;
   messages: SessionMessageView[];
   events: SessionEventView[];
@@ -185,6 +189,7 @@ export type SessionHistoryView = {
 export type SessionPatchUpdate = {
   label?: string | null;
   preferredModel?: string | null;
+  sessionType?: string | null;
   clearHistory?: boolean;
 };
 
@@ -211,6 +216,16 @@ export type ChatTurnView = {
 export type ChatCapabilitiesView = {
   stopSupported: boolean;
   stopReason?: string;
+};
+
+export type ChatSessionTypeOptionView = {
+  value: string;
+  label: string;
+};
+
+export type ChatSessionTypesView = {
+  defaultType: string;
+  options: ChatSessionTypeOptionView[];
 };
 
 export type ChatCommandOptionView = {

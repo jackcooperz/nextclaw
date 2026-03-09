@@ -116,6 +116,8 @@ function resolveAgentProfiles(config: Config): ResolvedAgentProfile[] {
 export class GatewayAgentRuntimePool {
   private routeResolver: AgentRouteResolver;
   private runtimes = new Map<string, AgentProfileRuntime>();
+  private dynamicEngineRuntimes = new Map<string, AgentProfileRuntime>();
+  private resolvedProfiles: ResolvedAgentProfile[] = [];
   private running = false;
   private defaultAgentId = "main";
   private onSystemSessionUpdated: SystemSessionUpdatedHandler | null = null;
@@ -163,6 +165,25 @@ export class GatewayAgentRuntimePool {
     this.onSystemSessionUpdated = handler;
   }
 
+  listAvailableEngineKinds(): string[] {
+    const kinds = new Set<string>(["native"]);
+    for (const runtime of this.runtimes.values()) {
+      kinds.add(normalizeEngineKind(runtime.engine.kind));
+    }
+    for (const registration of this.options.extensionRegistry?.engines ?? []) {
+      kinds.add(normalizeEngineKind(registration.kind));
+    }
+    return Array.from(kinds).sort((left, right) => {
+      if (left === "native") {
+        return -1;
+      }
+      if (right === "native") {
+        return 1;
+      }
+      return left.localeCompare(right);
+    });
+  }
+
   async processDirect(params: {
     content: string;
     sessionKey?: string;
@@ -182,6 +203,7 @@ export class GatewayAgentRuntimePool {
       metadata: params.metadata,
       agentId: params.agentId
     });
+    const forcedEngineKind = this.readForcedEngineKind(message.metadata);
     const commandResult = await this.executeDirectCommand(params.content, {
       channel: message.channel,
       chatId: message.chatId,
@@ -190,7 +212,9 @@ export class GatewayAgentRuntimePool {
     if (commandResult) {
       return commandResult;
     }
-    const runtime = this.resolveRuntime(route.agentId);
+    const runtime = forcedEngineKind
+      ? this.resolveRuntimeForEngineKind(forcedEngineKind, route.agentId)
+      : this.resolveRuntime(route.agentId);
     return runtime.engine.processDirect({
       content: params.content,
       sessionKey: route.sessionKey,
@@ -267,7 +291,19 @@ export class GatewayAgentRuntimePool {
       metadata: params.metadata,
       agentId: params.agentId
     });
-    const runtime = this.resolveRuntime(route.agentId);
+    const forcedEngineKind = this.readForcedEngineKind(params.metadata);
+    let runtime: AgentProfileRuntime;
+    try {
+      runtime = forcedEngineKind
+        ? this.resolveRuntimeForEngineKind(forcedEngineKind, route.agentId)
+        : this.resolveRuntime(route.agentId);
+    } catch (error) {
+      return {
+        supported: false,
+        agentId: route.agentId,
+        reason: error instanceof Error ? error.message : String(error)
+      };
+    }
     if (runtime.engine.kind !== "native") {
       return {
         supported: false,
@@ -383,6 +419,79 @@ export class GatewayAgentRuntimePool {
     throw new Error("No agent runtime available");
   }
 
+  private readForcedEngineKind(metadata?: Record<string, unknown>): string | undefined {
+    if (!metadata || typeof metadata !== "object") {
+      return undefined;
+    }
+    const raw =
+      this.readString(metadata.session_type) ??
+      this.readString(metadata.sessionType) ??
+      this.readString(metadata.engine_kind) ??
+      this.readString(metadata.engineKind);
+    return raw ? normalizeEngineKind(raw) : undefined;
+  }
+
+  private findRuntimeByEngineKind(kind: string, preferredAgentId?: string): AgentProfileRuntime | null {
+    const normalizedKind = normalizeEngineKind(kind);
+    const preferred = preferredAgentId ? this.runtimes.get(normalizeAgentId(preferredAgentId)) : null;
+    if (preferred && normalizeEngineKind(preferred.engine.kind) === normalizedKind) {
+      return preferred;
+    }
+    for (const runtime of this.runtimes.values()) {
+      if (normalizeEngineKind(runtime.engine.kind) === normalizedKind) {
+        return runtime;
+      }
+    }
+    return null;
+  }
+
+  private resolveBaseProfileForDynamicEngine(agentId: string): ResolvedAgentProfile {
+    const normalizedAgentId = normalizeAgentId(agentId);
+    return (
+      this.resolvedProfiles.find((profile) => profile.id === normalizedAgentId) ??
+      this.resolvedProfiles.find((profile) => profile.id === this.defaultAgentId) ??
+      this.resolvedProfiles[0] ?? {
+        id: this.defaultAgentId,
+        workspace: getWorkspacePath(this.options.config.agents.defaults.workspace),
+        model: this.options.config.agents.defaults.model,
+        maxIterations: this.options.config.agents.defaults.maxToolIterations,
+        contextTokens: this.options.config.agents.defaults.contextTokens,
+        engine: "native",
+        engineConfig: toRecord(this.options.config.agents.defaults.engineConfig)
+      }
+    );
+  }
+
+  private resolveRuntimeForEngineKind(kind: string, fallbackAgentId: string): AgentProfileRuntime {
+    const normalizedKind = normalizeEngineKind(kind);
+    const existing = this.findRuntimeByEngineKind(normalizedKind, fallbackAgentId);
+    if (existing) {
+      return existing;
+    }
+
+    if (!this.listAvailableEngineKinds().includes(normalizedKind)) {
+      throw new Error(`engine "${normalizedKind}" is not available`);
+    }
+
+    const cached = this.dynamicEngineRuntimes.get(normalizedKind);
+    if (cached) {
+      return cached;
+    }
+
+    const baseProfile = this.resolveBaseProfileForDynamicEngine(fallbackAgentId);
+    const dynamicProfile: ResolvedAgentProfile = {
+      ...baseProfile,
+      id: `__session_engine__${normalizedKind}`,
+      engine: normalizedKind
+    };
+    const runtime: AgentProfileRuntime = {
+      id: dynamicProfile.id,
+      engine: this.createEngine(dynamicProfile, this.options.config)
+    };
+    this.dynamicEngineRuntimes.set(normalizedKind, runtime);
+    return runtime;
+  }
+
   private createNativeEngineFactory(): AgentEngineFactory {
     return (context: AgentEngineFactoryContext) =>
       new NativeAgentEngine({
@@ -455,6 +564,7 @@ export class GatewayAgentRuntimePool {
 
   private rebuild(config: Config): void {
     const profiles = resolveAgentProfiles(config);
+    this.resolvedProfiles = profiles;
     const configuredDefault = this.readString(config.agents.list.find((entry) => entry.default)?.id);
     this.defaultAgentId = configuredDefault ?? profiles[0]?.id ?? "main";
 
@@ -467,6 +577,7 @@ export class GatewayAgentRuntimePool {
       });
     }
     this.runtimes = nextRuntimes;
+    this.dynamicEngineRuntimes.clear();
   }
 }
 

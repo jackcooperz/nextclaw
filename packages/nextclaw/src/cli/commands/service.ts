@@ -1148,6 +1148,19 @@ export class ServiceCommands {
       ...(params.model ? { model: params.model } : {})
     });
 
+    const resolveSessionTypeLabel = (sessionType: string): string => {
+      if (sessionType === "native") {
+        return "Native";
+      }
+      if (sessionType === "codex-sdk") {
+        return "Codex";
+      }
+      if (sessionType === "claude-agent-sdk") {
+        return "Claude Code";
+      }
+      return sessionType;
+    };
+
     let publishUiEvent: ((event: UiServerEvent) => void) | null = null;
     runtimePool.setSystemSessionUpdatedHandler(({ sessionKey, message }) => {
       if (!publishUiEvent) {
@@ -1191,6 +1204,16 @@ export class ServiceCommands {
         }
       },
       chatRuntime: {
+        listSessionTypes: async () => {
+          const options = runtimePool.listAvailableEngineKinds().map((value) => ({
+            value,
+            label: resolveSessionTypeLabel(value)
+          }));
+          return {
+            defaultType: "native",
+            options
+          };
+        },
         getCapabilities: async (params) => {
           const sessionKey =
             typeof params.sessionKey === "string" && params.sessionKey.trim().length > 0

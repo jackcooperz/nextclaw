@@ -101,11 +101,53 @@ async function refetchIfSessionVisible(params: ExecuteStreamRunParams & { result
   }
 }
 
+function hasRenderableMessage(message: SessionEventView['message'] | undefined): boolean {
+  if (!message) {
+    return false;
+  }
+  if (Array.isArray(message.tool_calls) && message.tool_calls.length > 0) {
+    return true;
+  }
+  if (typeof message.reasoning_content === 'string' && message.reasoning_content.trim()) {
+    return true;
+  }
+  const content = message.content;
+  if (typeof content === 'string') {
+    return content.trim().length > 0;
+  }
+  if (Array.isArray(content)) {
+    return content.some((item) => {
+      if (typeof item === 'string') {
+        return item.trim().length > 0;
+      }
+      if (item && typeof item === 'object') {
+        const text = (item as { text?: unknown }).text;
+        const nested = (item as { content?: unknown }).content;
+        if (typeof text === 'string' && text.trim().length > 0) {
+          return true;
+        }
+        if (typeof nested === 'string' && nested.trim().length > 0) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+  return content != null;
+}
+
 function upsertStreamingEvent(params: ExecuteStreamRunParams, event: SessionEventView) {
   params.setters.setStreamingSessionEvents((prev) => {
     const next = [...prev];
     const hit = next.findIndex((streamEvent) => streamEvent.seq === event.seq);
     if (hit >= 0) {
+      const current = next[hit];
+      const currentHasRenderableMessage = hasRenderableMessage(current?.message);
+      const incomingHasRenderableMessage = hasRenderableMessage(event?.message);
+      // Keep richer message event when a same-seq event has no renderable content.
+      if (currentHasRenderableMessage && !incomingHasRenderableMessage) {
+        return next;
+      }
       next[hit] = event;
     } else {
       next.push(event);
@@ -179,6 +221,7 @@ export class StreamRunController {
     activateRun(this.params, this.requestAbortController);
     applyRunStartState(this.params);
     this.params.setters.setStreamingAssistantTimestamp(new Date().toISOString());
+    await new Promise<void>((r) => queueMicrotask(r));
 
     try {
       const result = await this.params.openStream({
@@ -215,9 +258,10 @@ export class StreamRunController {
       if (this.params.runId !== this.params.runIdRef.current) {
         return;
       }
+      // User message rendering is driven by local optimistic state and history fetch.
+      // Ignore streamed user events to avoid backend event jitter overriding local UI.
       if (event.data.message?.role === 'user') {
-        this.progress.hasUserSessionEvent = true;
-        this.params.setters.setOptimisticUserEvent(null);
+        return;
       }
 
       upsertStreamingEvent(this.params, event.data);

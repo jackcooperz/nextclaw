@@ -28,6 +28,7 @@ import type {
   ChatTurnRequest,
   ChatTurnView,
   ChatCapabilitiesView,
+  ChatSessionTypesView,
   ChatTurnStopRequest,
   ChatTurnStopResult,
   ChatRunListView,
@@ -315,6 +316,15 @@ export async function fetchChatCapabilities(params?: { sessionKey?: string; agen
   }
   const suffix = query.toString();
   const response = await api.get<ChatCapabilitiesView>(suffix ? `/api/chat/capabilities?${suffix}` : '/api/chat/capabilities');
+  if (!response.ok) {
+    throw new Error(response.error.message);
+  }
+  return response.data;
+}
+
+// GET /api/chat/session-types
+export async function fetchChatSessionTypes(): Promise<ChatSessionTypesView> {
+  const response = await api.get<ChatSessionTypesView>('/api/chat/session-types');
   if (!response.ok) {
     throw new Error(response.error.message);
   }

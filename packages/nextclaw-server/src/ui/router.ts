@@ -18,7 +18,9 @@ import {
   listSessions,
   getSessionHistory,
   patchSession,
-  deleteSession
+  deleteSession,
+  DEFAULT_SESSION_TYPE,
+  SessionPatchValidationError
 } from "./config.js";
 import { importProviderAuthFromCli, pollProviderAuth, startProviderAuth } from "./provider-auth.js";
 import type {
@@ -27,6 +29,7 @@ import type {
   ChatRunState,
   ChatRunView,
   ChatCapabilitiesView,
+  ChatSessionTypesView,
   ChatCommandsView,
   ChatTurnRequest,
   ChatTurnStopRequest,
@@ -345,6 +348,73 @@ function readNonEmptyString(value: unknown): string | undefined {
   }
   const trimmed = value.trim();
   return trimmed || undefined;
+}
+
+function normalizeSessionType(value: unknown): string | undefined {
+  return readNonEmptyString(value)?.toLowerCase();
+}
+
+function resolveSessionTypeLabel(sessionType: string): string {
+  if (sessionType === "native") {
+    return "Native";
+  }
+  if (sessionType === "codex-sdk") {
+    return "Codex";
+  }
+  if (sessionType === "claude-agent-sdk") {
+    return "Claude Code";
+  }
+  return sessionType;
+}
+
+async function buildChatSessionTypesView(chatRuntime?: UiChatRuntime): Promise<ChatSessionTypesView> {
+  if (!chatRuntime?.listSessionTypes) {
+    return {
+      defaultType: DEFAULT_SESSION_TYPE,
+      options: [{ value: DEFAULT_SESSION_TYPE, label: resolveSessionTypeLabel(DEFAULT_SESSION_TYPE) }]
+    };
+  }
+
+  const payload = await chatRuntime.listSessionTypes();
+  const deduped = new Map<string, { value: string; label: string }>();
+  for (const rawOption of payload.options ?? []) {
+    const normalized = normalizeSessionType(rawOption.value);
+    if (!normalized) {
+      continue;
+    }
+    deduped.set(normalized, {
+      value: normalized,
+      label: readNonEmptyString(rawOption.label) ?? resolveSessionTypeLabel(normalized)
+    });
+  }
+  if (!deduped.has(DEFAULT_SESSION_TYPE)) {
+    deduped.set(DEFAULT_SESSION_TYPE, {
+      value: DEFAULT_SESSION_TYPE,
+      label: resolveSessionTypeLabel(DEFAULT_SESSION_TYPE)
+    });
+  }
+
+  const defaultType = normalizeSessionType(payload.defaultType) ?? DEFAULT_SESSION_TYPE;
+  if (!deduped.has(defaultType)) {
+    deduped.set(defaultType, {
+      value: defaultType,
+      label: resolveSessionTypeLabel(defaultType)
+    });
+  }
+  const options = Array.from(deduped.values()).sort((left, right) => {
+    if (left.value === DEFAULT_SESSION_TYPE) {
+      return -1;
+    }
+    if (right.value === DEFAULT_SESSION_TYPE) {
+      return 1;
+    }
+    return left.value.localeCompare(right.value);
+  });
+
+  return {
+    defaultType,
+    options
+  };
 }
 
 function resolveAgentIdFromSessionKey(sessionKey?: string): string | undefined {
@@ -1829,6 +1899,15 @@ export function createUiRouter(options: UiRouterOptions): Hono {
     }
   });
 
+  app.get("/api/chat/session-types", async (c) => {
+    try {
+      const payload = await buildChatSessionTypesView(options.chatRuntime);
+      return c.json(ok(payload));
+    } catch (error) {
+      return c.json(err("CHAT_SESSION_TYPES_FAILED", String(error)), 500);
+    }
+  });
+
   app.get("/api/chat/commands", async (c) => {
     try {
       const config = loadConfigOrDefault(options.configPath);
@@ -2354,7 +2433,26 @@ export function createUiRouter(options: UiRouterOptions): Hono {
     if (!body.ok || !body.data || typeof body.data !== "object") {
       return c.json(err("INVALID_BODY", "invalid json body"), 400);
     }
-    const data = patchSession(options.configPath, key, body.data as SessionPatchUpdate);
+    let availableSessionTypes: string[] | undefined;
+    if (Object.prototype.hasOwnProperty.call(body.data, "sessionType")) {
+      const sessionTypes = await buildChatSessionTypesView(options.chatRuntime);
+      availableSessionTypes = sessionTypes.options.map((item) => item.value);
+    }
+
+    let data: ReturnType<typeof patchSession>;
+    try {
+      data = patchSession(options.configPath, key, body.data as SessionPatchUpdate, {
+        ...(availableSessionTypes ? { availableSessionTypes } : {})
+      });
+    } catch (error) {
+      if (error instanceof SessionPatchValidationError) {
+        if (error.code === "SESSION_TYPE_IMMUTABLE") {
+          return c.json(err(error.code, error.message), 409);
+        }
+        return c.json(err(error.code, error.message), 400);
+      }
+      throw error;
+    }
     if (!data) {
       return c.json(err("NOT_FOUND", `session not found: ${key}`), 404);
     }

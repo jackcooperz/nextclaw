@@ -950,6 +950,50 @@ function createSessionManager(config: Config): SessionManager {
   return new SessionManager(getWorkspacePathFromConfig(config));
 }
 
+export const DEFAULT_SESSION_TYPE = "native";
+const SESSION_TYPE_METADATA_KEY = "session_type";
+
+type SessionLike = {
+  messages: Array<{ role?: unknown }>;
+  metadata: Record<string, unknown>;
+};
+
+function normalizeSessionType(value: unknown): string | null {
+  if (typeof value !== "string") {
+    return null;
+  }
+  const normalized = value.trim().toLowerCase();
+  return normalized.length > 0 ? normalized : null;
+}
+
+function readSessionType(session: SessionLike): string {
+  const normalized = normalizeSessionType(session.metadata[SESSION_TYPE_METADATA_KEY]);
+  return normalized ?? DEFAULT_SESSION_TYPE;
+}
+
+function countUserMessages(session: SessionLike): number {
+  return session.messages.reduce((total, message) => {
+    const role = typeof message.role === "string" ? message.role.trim().toLowerCase() : "";
+    return role === "user" ? total + 1 : total;
+  }, 0);
+}
+
+function isSessionTypeMutable(session: SessionLike): boolean {
+  const activeUiRunId =
+    typeof session.metadata.ui_active_run_id === "string" ? session.metadata.ui_active_run_id.trim() : "";
+  return countUserMessages(session) === 0 && activeUiRunId.length === 0;
+}
+
+export class SessionPatchValidationError extends Error {
+  constructor(
+    public readonly code: "SESSION_TYPE_INVALID" | "SESSION_TYPE_IMMUTABLE" | "SESSION_TYPE_UNAVAILABLE",
+    message: string
+  ) {
+    super(message);
+    this.name = "SessionPatchValidationError";
+  }
+}
+
 export function listSessions(
   configPath: string,
   query?: { q?: string; limit?: number; activeMinutes?: number }
@@ -977,12 +1021,22 @@ export function listSessions(
         typeof metadata.preferred_model === "string" ? metadata.preferred_model.trim() : "";
       const createdAt = typeof item.created_at === "string" ? item.created_at : new Date(0).toISOString();
       const updatedAt = typeof item.updated_at === "string" ? item.updated_at : createdAt;
+      const sessionType = readSessionType({
+        metadata,
+        messages
+      });
+      const sessionTypeMutable = isSessionTypeMutable({
+        metadata,
+        messages
+      });
       return {
         key,
         createdAt,
         updatedAt,
         label: label || undefined,
         preferredModel: preferredModel || undefined,
+        sessionType,
+        sessionTypeMutable,
         messageCount: messages.length,
         lastRole: typeof lastMessage?.role === "string" ? lastMessage.role : undefined,
         lastTimestamp: typeof lastMessage?.timestamp === "string" ? lastMessage.timestamp : undefined
@@ -1028,10 +1082,14 @@ export function getSessionHistory(configPath: string, key: string, limit?: numbe
   const safeEventLimit = Math.min(2000, Math.max(50, safeLimit * 4));
   const allEvents = session.events ?? [];
   const events = allEvents.length > safeEventLimit ? allEvents.slice(-safeEventLimit) : allEvents;
+  const sessionType = readSessionType(session);
+  const sessionTypeMutable = isSessionTypeMutable(session);
   return {
     key: normalizedKey,
     totalMessages: allMessages.length,
     totalEvents: allEvents.length,
+    sessionType,
+    sessionTypeMutable,
     metadata: session.metadata,
     messages: messages.map((message) => {
       const entry: Record<string, unknown> = {
@@ -1079,7 +1137,12 @@ export function getSessionHistory(configPath: string, key: string, limit?: numbe
   };
 }
 
-export function patchSession(configPath: string, key: string, patch: SessionPatchUpdate): SessionHistoryView | null {
+export function patchSession(
+  configPath: string,
+  key: string,
+  patch: SessionPatchUpdate,
+  options?: { availableSessionTypes?: string[] }
+): SessionHistoryView | null {
   const normalizedKey = normalizeSessionKey(key);
   if (!normalizedKey) {
     return null;
@@ -1111,6 +1174,36 @@ export function patchSession(configPath: string, key: string, patch: SessionPatc
     } else {
       delete session.metadata.preferred_model;
     }
+  }
+
+  if (Object.prototype.hasOwnProperty.call(patch, "sessionType")) {
+    const normalizedSessionType = normalizeSessionType(patch.sessionType);
+    if (!normalizedSessionType) {
+      throw new SessionPatchValidationError(
+        "SESSION_TYPE_INVALID",
+        "sessionType must be a non-empty string"
+      );
+    }
+
+    if (!isSessionTypeMutable(session)) {
+      throw new SessionPatchValidationError(
+        "SESSION_TYPE_IMMUTABLE",
+        "sessionType cannot be changed after the first user message"
+      );
+    }
+
+    const availableSessionTypes = new Set<string>(
+      (options?.availableSessionTypes ?? [DEFAULT_SESSION_TYPE]).map((item) => normalizeSessionType(item)).filter((item): item is string => Boolean(item))
+    );
+    availableSessionTypes.add(DEFAULT_SESSION_TYPE);
+    if (!availableSessionTypes.has(normalizedSessionType)) {
+      throw new SessionPatchValidationError(
+        "SESSION_TYPE_UNAVAILABLE",
+        `sessionType is unavailable: ${normalizedSessionType}`
+      );
+    }
+
+    session.metadata[SESSION_TYPE_METADATA_KEY] = normalizedSessionType;
   }
 
   session.updatedAt = new Date();

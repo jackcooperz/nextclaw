@@ -506,6 +506,14 @@ export const LABELS: Record<string, { zh: string; en: string }> = {
   chatSelectAgent: { zh: '选择 Agent', en: 'Select Agent' },
   chatModelLabel: { zh: '对话模型', en: 'Chat Model' },
   chatSelectModel: { zh: '选择模型', en: 'Select model' },
+  chatSessionTypeLabel: { zh: '会话类型', en: 'Session Type' },
+  chatSessionTypeNative: { zh: '原生', en: 'Native' },
+  chatSessionTypeCodex: { zh: 'Codex', en: 'Codex' },
+  chatSessionTypeClaude: { zh: 'Claude Code', en: 'Claude Code' },
+  chatSessionTypeUnavailableSuffix: {
+    zh: '当前不可用，请启用对应插件或新建 Native 会话。',
+    en: 'is unavailable now. Re-enable the plugin or create a native session.'
+  },
   chatModelNoOptions: { zh: '暂无可用模型，请先配置提供商。', en: 'No available models. Configure a provider first.' },
   chatGoConfigureProvider: { zh: '去配置提供商', en: 'Go to Providers' },
   chatProviderSetupTitle: { zh: '开始前先配置提供商', en: 'Configure a Provider First' },

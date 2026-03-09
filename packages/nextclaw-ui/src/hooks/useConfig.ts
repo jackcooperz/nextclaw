@@ -24,6 +24,7 @@ import {
   fetchChatRun,
   fetchChatRuns,
   fetchChatCapabilities,
+  fetchChatSessionTypes,
   fetchCronJobs,
   deleteCronJob,
   setCronJobEnabled,
@@ -294,9 +295,26 @@ export function useChatCapabilities(params?: { sessionKey?: string | null; agent
   });
 }
 
-export function useChatRuns(params?: { sessionKey?: string | null; states?: Array<'queued' | 'running' | 'completed' | 'failed' | 'aborted'>; limit?: number }) {
+export function useChatSessionTypes() {
+  return useQuery({
+    queryKey: ['chat-session-types'],
+    queryFn: fetchChatSessionTypes,
+    staleTime: 10_000,
+    retry: false
+  });
+}
+
+export function useChatRuns(params?: {
+  sessionKey?: string | null;
+  states?: Array<'queued' | 'running' | 'completed' | 'failed' | 'aborted'>;
+  limit?: number;
+  syncActiveStates?: boolean;
+  isLocallyRunning?: boolean;
+}) {
   const sessionKey = params?.sessionKey?.trim() || undefined;
   const states = Array.isArray(params?.states) && params.states.length > 0 ? params.states : undefined;
+  const isActiveStatesQuery = Boolean(states?.some((state) => state === 'queued' || state === 'running'));
+  const shouldSyncActiveStates = Boolean(params?.syncActiveStates && isActiveStatesQuery);
   return useQuery({
     queryKey: ['chat-runs', sessionKey ?? null, states ?? null, params?.limit ?? null],
     queryFn: () => fetchChatRuns({
@@ -306,6 +324,18 @@ export function useChatRuns(params?: { sessionKey?: string | null; states?: Arra
     }),
     enabled: Boolean(sessionKey) || Boolean(states),
     staleTime: 5_000,
+    refetchInterval: (query) => {
+      if (!shouldSyncActiveStates) {
+        return false;
+      }
+      if (params?.isLocallyRunning) {
+        return 800;
+      }
+      const data = query.state.data;
+      const hasActiveRuns = Array.isArray(data?.runs) && data.runs.length > 0;
+      return hasActiveRuns ? 800 : false;
+    },
+    refetchIntervalInBackground: false,
     retry: false
   });
 }
