@@ -1,10 +1,10 @@
 # Marketplace Worker Deploy & Sync
 
-适用范围：`workers/marketplace-api`（D1-backed marketplace API）。
+适用范围：`workers/marketplace-api`（D1 metadata + R2 assets marketplace API）。
 
 ## 部署原则
 
-- Marketplace 数据唯一来源是 Cloudflare D1（不再使用仓库内 JSON catalog）。
+- Marketplace 元数据来源是 Cloudflare D1，skill 文件资产来源是 Cloudflare R2（不再使用仓库内 JSON catalog）。
 - 发布闭环包含：D1 migration -> build/lint/tsc -> worker deploy -> 线上 smoke。
 - 手动部署作为兜底流程（CI 异常或紧急修复时使用）。
 
@@ -13,6 +13,7 @@
 1. `wrangler.toml` 已配置：
    - `MARKETPLACE_SKILLS_DB`
    - `MARKETPLACE_PLUGINS_DB`
+   - `MARKETPLACE_SKILLS_FILES`
 2. 已配置 Cloudflare 凭证：
    - `CLOUDFLARE_API_TOKEN`
    - `CLOUDFLARE_ACCOUNT_ID`
@@ -44,7 +45,7 @@ curl -sS 'https://marketplace-api.nextclaw.io/api/v1/skills/items?page=1&pageSiz
 ```
 
 预期：
-- `/health` 返回 `ok: true` 且 `storage: "d1"`
+- `/health` 返回 `ok: true` 且 `storage: "d1+r2"`
 - `/api/v1/plugins/items` 返回 `ok: true`
 - `/api/v1/skills/items` 返回 `ok: true`
 - `/api/v1/skills/items` 的 skill `install.kind` 只允许 `builtin | marketplace`（若出现 `git` 说明仍是旧 worker）

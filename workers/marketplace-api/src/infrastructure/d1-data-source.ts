@@ -41,6 +41,9 @@ type SkillFileRow = {
   content_b64: string;
   content_sha256: string;
   updated_at: string;
+  storage_backend: string | null;
+  r2_key: string | null;
+  size_bytes: number | null;
 };
 
 type ExistingSkillRow = {
@@ -56,9 +59,10 @@ type TableNames = {
 
 export type MarketplaceSkillFile = {
   path: string;
-  contentBase64: string;
   sha256: string;
+  sizeBytes: number;
   updatedAt: string;
+  downloadPath?: string;
 };
 
 export type MarketplaceSkillUpsertInput = {
@@ -409,7 +413,10 @@ export class D1MarketplacePluginDataSource extends D1MarketplaceSectionDataSourc
 }
 
 export class D1MarketplaceSkillDataSource extends D1MarketplaceSectionDataSourceBase {
-  constructor(db: D1Database) {
+  constructor(
+    db: D1Database,
+    private readonly filesBucket: R2Bucket
+  ) {
     super(db);
   }
 
@@ -431,24 +438,43 @@ export class D1MarketplaceSkillDataSource extends D1MarketplaceSectionDataSource
       return null;
     }
 
-    const filesResult = await this.db
-      .prepare(`
-        SELECT file_path, content_b64, content_sha256, updated_at
-        FROM marketplace_skill_files
-        WHERE skill_item_id = ?
-        ORDER BY file_path ASC
-      `)
-      .bind(item.id)
-      .all<SkillFileRow>();
+    const rows = await this.getSkillFileRowsByItemId(item.id);
 
     return {
       item,
-      files: (filesResult.results ?? []).map((row) => ({
-        path: row.file_path,
-        contentBase64: row.content_b64,
-        sha256: row.content_sha256,
-        updatedAt: row.updated_at
-      }))
+      files: rows.map((row) => this.mapSkillFileMetadata(row))
+    };
+  }
+
+  async getSkillFileContentBySlug(
+    slug: string,
+    rawFilePath: string
+  ): Promise<{ item: MarketplaceItem; file: MarketplaceSkillFile; bytes: Uint8Array } | null> {
+    const item = await this.getSkillItemBySlug(slug);
+    if (!item) {
+      return null;
+    }
+
+    const filePath = this.normalizeFilePath(rawFilePath, "file.path");
+    const row = await this.db
+      .prepare(`
+        SELECT file_path, content_b64, content_sha256, updated_at, storage_backend, r2_key, size_bytes
+        FROM marketplace_skill_files
+        WHERE skill_item_id = ? AND file_path = ?
+        LIMIT 1
+      `)
+      .bind(item.id, filePath)
+      .first<SkillFileRow>();
+
+    if (!row) {
+      return null;
+    }
+
+    const bytes = await this.readSkillFileBytes(item.id, row);
+    return {
+      item,
+      file: this.mapSkillFileMetadata(row, bytes.byteLength),
+      bytes
     };
   }
 
@@ -512,11 +538,22 @@ export class D1MarketplaceSkillDataSource extends D1MarketplaceSectionDataSource
       )
       .run();
 
+    const existingFileRows = await this.getSkillFileRowsByItemId(itemId);
+
     await this.db.prepare("DELETE FROM marketplace_skill_files WHERE skill_item_id = ?").bind(itemId).run();
+
+    const staleR2Keys = existingFileRows
+      .filter((row) => row.storage_backend === "r2" && typeof row.r2_key === "string" && row.r2_key.trim().length > 0)
+      .map((row) => row.r2_key as string);
+    if (staleR2Keys.length > 0) {
+      await this.filesBucket.delete(staleR2Keys);
+    }
 
     for (const file of input.files) {
       const bytes = this.decodeBase64(file.contentBase64, `files.${file.path}`);
       const sha256 = await this.sha256Hex(bytes);
+      const r2Key = this.buildSkillFileObjectKey(itemId, file.path, sha256);
+      await this.filesBucket.put(r2Key, bytes);
       await this.db
         .prepare(`
           INSERT INTO marketplace_skill_files (
@@ -524,10 +561,13 @@ export class D1MarketplaceSkillDataSource extends D1MarketplaceSectionDataSource
             file_path,
             content_b64,
             content_sha256,
+            storage_backend,
+            r2_key,
+            size_bytes,
             updated_at
-          ) VALUES (?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `)
-        .bind(itemId, file.path, file.contentBase64, sha256, updatedAt)
+        .bind(itemId, file.path, "", sha256, "r2", r2Key, bytes.byteLength, updatedAt)
         .run();
     }
 
@@ -569,6 +609,85 @@ export class D1MarketplaceSkillDataSource extends D1MarketplaceSectionDataSource
       `)
       .bind(sceneId, itemId, nextSort)
       .run();
+  }
+
+  private async getSkillFileRowsByItemId(itemId: string): Promise<SkillFileRow[]> {
+    const filesResult = await this.db
+      .prepare(`
+        SELECT file_path, content_b64, content_sha256, updated_at, storage_backend, r2_key, size_bytes
+        FROM marketplace_skill_files
+        WHERE skill_item_id = ?
+        ORDER BY file_path ASC
+      `)
+      .bind(itemId)
+      .all<SkillFileRow>();
+
+    return filesResult.results ?? [];
+  }
+
+  private mapSkillFileMetadata(row: SkillFileRow, resolvedSizeBytes?: number): MarketplaceSkillFile {
+    const sizeBytes = Number.isFinite(resolvedSizeBytes)
+      ? Number(resolvedSizeBytes)
+      : Number.isFinite(row.size_bytes)
+        ? Number(row.size_bytes)
+        : this.estimateBase64Size(row.content_b64);
+
+    return {
+      path: row.file_path,
+      sha256: row.content_sha256,
+      sizeBytes,
+      updatedAt: row.updated_at
+    };
+  }
+
+  private estimateBase64Size(raw: string): number {
+    if (!raw) {
+      return 0;
+    }
+    const sanitized = raw.replace(/\s+/g, "");
+    const padding = sanitized.endsWith("==") ? 2 : sanitized.endsWith("=") ? 1 : 0;
+    return Math.max(0, Math.floor((sanitized.length * 3) / 4) - padding);
+  }
+
+  private buildSkillFileObjectKey(itemId: string, filePath: string, sha256: string): string {
+    const encodedPath = filePath
+      .split("/")
+      .map((segment) => encodeURIComponent(segment))
+      .join("/");
+    return `skills/${encodeURIComponent(itemId)}/${sha256}/${encodedPath}`;
+  }
+
+  private async readSkillFileBytes(itemId: string, row: SkillFileRow): Promise<Uint8Array> {
+    if (row.storage_backend === "r2" && row.r2_key) {
+      const object = await this.filesBucket.get(row.r2_key);
+      if (object) {
+        return new Uint8Array(await object.arrayBuffer());
+      }
+    }
+
+    if (!row.content_b64) {
+      throw new DomainValidationError(`skill file content missing: ${row.file_path}`);
+    }
+
+    const bytes = this.decodeBase64(row.content_b64, `marketplace_skill_files.content_b64(${row.file_path})`);
+    const sha256 = await this.sha256Hex(bytes);
+    const r2Key = row.r2_key ?? this.buildSkillFileObjectKey(itemId, row.file_path, sha256);
+
+    await this.filesBucket.put(r2Key, bytes);
+    await this.db
+      .prepare(`
+        UPDATE marketplace_skill_files
+        SET content_b64 = '',
+            content_sha256 = ?,
+            storage_backend = 'r2',
+            r2_key = ?,
+            size_bytes = ?
+        WHERE skill_item_id = ? AND file_path = ?
+      `)
+      .bind(sha256, r2Key, bytes.byteLength, itemId, row.file_path)
+      .run();
+
+    return bytes;
   }
 
   private async getSkillItemBySlug(slug: string): Promise<MarketplaceItem | null> {

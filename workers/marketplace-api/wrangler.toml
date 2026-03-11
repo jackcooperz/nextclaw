@@ -19,3 +19,7 @@ binding = "MARKETPLACE_PLUGINS_DB"
 database_name = "nextclaw-marketplace-plugins"
 database_id = "17df1af4-5db9-4870-83e9-c151af7bc313"
 migrations_dir = "migrations/plugins"
+
+[[r2_buckets]]
+binding = "MARKETPLACE_SKILLS_FILES"
+bucket_name = "nextclaw-marketplace-skills-files"

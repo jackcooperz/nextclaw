@@ -16,6 +16,7 @@ import { ApiResponseFactory } from "./presentation/http/response";
 type MarketplaceBindings = {
   MARKETPLACE_SKILLS_DB: D1Database;
   MARKETPLACE_PLUGINS_DB: D1Database;
+  MARKETPLACE_SKILLS_FILES: R2Bucket;
   MARKETPLACE_CACHE_TTL_SECONDS?: string;
   MARKETPLACE_ADMIN_TOKEN?: string;
 };
@@ -44,7 +45,7 @@ class MarketplaceRuntime {
 
   constructor(bindings: MarketplaceBindings) {
     this.pluginDataSource = new D1MarketplacePluginDataSource(bindings.MARKETPLACE_PLUGINS_DB);
-    this.skillDataSource = new D1MarketplaceSkillDataSource(bindings.MARKETPLACE_SKILLS_DB);
+    this.skillDataSource = new D1MarketplaceSkillDataSource(bindings.MARKETPLACE_SKILLS_DB, bindings.MARKETPLACE_SKILLS_FILES);
     const ttlSeconds = this.parseCacheTtlSeconds(bindings.MARKETPLACE_CACHE_TTL_SECONDS);
 
     this.pluginRepository = new InMemoryPluginRepository(this.pluginDataSource, {
@@ -89,6 +90,9 @@ function getRuntime(bindings: MarketplaceBindings): MarketplaceRuntime {
   if (!bindings.MARKETPLACE_SKILLS_DB) {
     throw new Error("MARKETPLACE_SKILLS_DB binding is required");
   }
+  if (!bindings.MARKETPLACE_SKILLS_FILES) {
+    throw new Error("MARKETPLACE_SKILLS_FILES binding is required");
+  }
   const pluginDb = bindings.MARKETPLACE_PLUGINS_DB;
   const skillDb = bindings.MARKETPLACE_SKILLS_DB;
   let bySkill = runtimes.get(pluginDb);
@@ -130,26 +134,8 @@ function splitMarkdownFrontmatter(raw: string): { metadataRaw?: string; bodyRaw:
   };
 }
 
-function decodeBase64(raw: string): Uint8Array {
-  const binary = atob(raw);
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-  return bytes;
-}
-
 function decodeUtf8(bytes: Uint8Array): string {
   return new TextDecoder().decode(bytes);
-}
-
-function pickSkillMarkdown(files: Array<{ path: string; contentBase64: string }>): string | null {
-  const skillFile = files.find((file) => file.path === "SKILL.md")
-    ?? files.find((file) => file.path.toLowerCase() === "skill.md");
-  if (!skillFile) {
-    return null;
-  }
-  return decodeUtf8(decodeBase64(skillFile.contentBase64));
 }
 
 function ensureSkillItem(item: MarketplaceItem): void {
@@ -196,7 +182,7 @@ app.get("/health", (c) => {
   return responses.ok(c, {
     status: "ok",
     service: "marketplace-api",
-    storage: "d1",
+    storage: "d1+r2",
     databases: ["skills", "plugins"]
   });
 });
@@ -250,23 +236,48 @@ app.get("/api/v1/skills/items/:slug/files", async (c) => {
     install: payload.item.install,
     updatedAt: payload.item.updatedAt,
     totalFiles: payload.files.length,
-    files: payload.files
+    files: payload.files.map((file) => ({
+      ...file,
+      downloadPath: `/api/v1/skills/items/${encodeURIComponent(payload.item.slug)}/files/blob?path=${encodeURIComponent(file.path)}`
+    }))
+  });
+});
+
+app.get("/api/v1/skills/items/:slug/files/blob", async (c) => {
+  const runtime = getRuntime(c.env);
+  const slug = c.req.param("slug");
+  const path = c.req.query("path");
+  if (!path) {
+    throw new DomainValidationError("query.path is required");
+  }
+  const payload = await runtime.skillDataSource.getSkillFileContentBySlug(slug, path);
+  if (!payload) {
+    throw new ResourceNotFoundError(`skill file not found: ${slug}/${path}`);
+  }
+  ensureSkillItem(payload.item);
+
+  const filename = payload.file.path.split("/").pop() ?? "file";
+  return new Response(payload.bytes, {
+    status: 200,
+    headers: {
+      "content-type": "application/octet-stream",
+      "content-disposition": `inline; filename*=UTF-8''${encodeURIComponent(filename)}`,
+      "x-skill-file-sha256": payload.file.sha256
+    }
   });
 });
 
 app.get("/api/v1/skills/items/:slug/content", async (c) => {
   const runtime = getRuntime(c.env);
   const slug = c.req.param("slug");
-  const payload = await runtime.skillDataSource.getSkillFilesBySlug(slug);
+  const payload = await runtime.skillDataSource.getSkillFileContentBySlug(slug, "SKILL.md")
+    ?? await runtime.skillDataSource.getSkillFileContentBySlug(slug, "skill.md");
   if (!payload) {
     throw new ResourceNotFoundError(`skill item not found: ${slug}`);
   }
   ensureSkillItem(payload.item);
 
-  const raw = pickSkillMarkdown(payload.files);
-  if (!raw) {
-    throw new ResourceNotFoundError(`skill markdown not found: ${slug}`);
-  }
+  const raw = decodeUtf8(payload.bytes);
 
   const split = splitMarkdownFrontmatter(raw);
   return runtime.responses.ok(c, {
