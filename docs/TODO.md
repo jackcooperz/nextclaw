@@ -1,25 +1,26 @@
-# TODO 管理（Inbox / Now / Next / Later）
+# TODO 管理（Execution Backlog）
 
-目标：把“想到的事”统一收口，避免遗漏和重复讨论。  
-方法：先收集，再分诊，再进入迭代执行。
+目标：把“近期要做什么”收口到一个地方，并和中长期路线图打通。  
+中长期方向请看 [ROADMAP](./ROADMAP.md)。
 
-## 0. 使用规则
+## 0. 机制边界（Roadmap / TODO / Issue）
 
-1. 所有临时想法先写到 `Inbox`，不在聊天记录里长期堆积。
-2. `Inbox` 条目 24 小时内必须转成 Issue（或明确丢弃），并补上链接。
-3. 每周固定一次 triage，把事项移动到 `Now / Next / Later`。
-4. 仅从 `Now` 拉任务进入开发，减少中途插队。
-5. 完成后移动到 `Done`，并保留 Issue/PR 链接。
+1. `ROADMAP` 负责方向和阶段目标（3-12 个月）。
+2. `TODO` 负责可执行事项（天/周级）。
+3. `GitHub Issue` 负责任务追踪与协作（状态、讨论、验收）。
+4. 任一 TODO 条目都必须绑定 Issue，避免“文档里有、系统里没有”。
+5. 完成项必须回填 PR/提交链接，保留可审计路径。
 
 配套参考：
+- [项目路线图](./ROADMAP.md)
 - [Issue 标签建议](./workflows/issue-labels.md)
 - [GitHub Issue 模板](../.github/ISSUE_TEMPLATE)
 
-## 1. Inbox（收集区，未分诊）
+## 1. Inbox（收集区，24 小时内分诊）
 
 | Date | Idea | Source | Owner | Issue | Next Action |
 | --- | --- | --- | --- | --- | --- |
-| YYYY-MM-DD | 一句话描述待办 | user/ops/dev | @owner | `TBD` | create issue |
+| YYYY-MM-DD | 一句话描述待办 | user/ops/dev | @owner | `TBD` | create issue or drop |
 
 ## 2. Now（当前迭代必须做）
 
@@ -33,7 +34,7 @@
 | --- | --- | --- | --- | --- |
 | P2 | 事项标题 | @owner | #124 | 当前迭代完成后 |
 
-## 4. Later（长期池）
+## 4. Later（待排序池）
 
 | Item | Reason to defer | Re-check Date | Issue |
 | --- | --- | --- | --- |
@@ -48,6 +49,7 @@
 ## 6. 每周 triage 清单（建议 30 分钟）
 
 - 清空 `Inbox`：全部转 Issue 或丢弃。
-- 给每个新 Issue 补齐 `type`、`priority`、`status`。
-- 更新 `Now` 容量：在研条目不超过团队并行上限。
-- 把阻塞项标记为 `status: blocked` 并写明外部依赖。
+- 给新 Issue 补齐 `type`、`priority`、`status`。
+- 从 `ROADMAP` 挑 1-3 个里程碑拆到 `Next`。
+- 控制 `Now` 在团队并行上限内，避免过载。
+- 阻塞项标记为 `status: blocked`，并写明外部依赖。
