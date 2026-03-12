@@ -269,5 +269,4 @@ jobs:
             dist/desktop-release/*-mac.zip
             dist/desktop-release/*-win32-*-unpacked.zip
             dist/desktop-release/*.AppImage
-            dist/desktop-release/*.AppImage.blockmap
             dist/desktop-release/*.blockmap
