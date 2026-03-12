@@ -1,5 +1,11 @@
 # @nextclaw/channel-plugin-feishu
 
+## 0.1.10
+
+### Patch Changes
+
+- @nextclaw/channel-runtime@0.1.34
+
 ## 0.1.9
 
 ### Patch Changes

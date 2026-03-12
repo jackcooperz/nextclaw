@@ -1,5 +1,11 @@
 # nextclaw-core
 
+## 0.7.6
+
+### Patch Changes
+
+- fix tool-loop empty final response handling and improve error surfacing with bounded user-visible diagnostics.
+
 ## 0.7.5
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # nextclaw
 
+## 0.9.23
+
+### Patch Changes
+
+- fix tool-loop empty final response handling and improve error surfacing with bounded user-visible diagnostics.
+- Updated dependencies
+  - @nextclaw/core@0.7.6
+  - @nextclaw/server@0.6.10
+  - @nextclaw/openclaw-compat@0.2.5
+  - @nextclaw/runtime@0.1.5
+
 ## 0.9.22
 
 ### Patch Changes
