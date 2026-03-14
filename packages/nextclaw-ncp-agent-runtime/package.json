@@ -1,8 +1,8 @@
 {
-  "name": "@nextclaw/ncp",
-  "version": "0.1.1",
+  "name": "@nextclaw/ncp-agent-runtime",
+  "version": "0.1.0",
   "private": false,
-  "description": "NextClaw Communication Protocol core abstractions and types.",
+  "description": "Default agent runtime implementation built on NCP interfaces.",
   "type": "module",
   "exports": {
     ".": {
@@ -18,6 +18,9 @@
     "build": "tsup src/index.ts --format esm --dts --out-dir dist",
     "lint": "eslint .",
     "tsc": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@nextclaw/ncp": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

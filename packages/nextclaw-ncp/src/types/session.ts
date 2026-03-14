@@ -21,11 +21,12 @@ export type ListMessagesOptions = {
 };
 
 /**
- * Optional API for querying session list and message history.
+ * API for session list, message history, and session lifecycle.
  * Implementations that support persistence can provide this alongside NcpAgentClientEndpoint.
  */
-export interface NcpSessionQueryApi {
+export interface NcpSessionApi {
   listSessions(options?: ListSessionsOptions): Promise<NcpSessionSummary[]>;
   listSessionMessages(sessionId: string, options?: ListMessagesOptions): Promise<NcpMessage[]>;
   getSession(sessionId: string): Promise<NcpSessionSummary | null>;
+  deleteSession(sessionId: string): Promise<void>;
 }
