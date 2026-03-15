@@ -228,6 +228,12 @@
   - 反例：发现问题后仅在单点加 if/兜底绕过，未解释根因、未评估复发路径、未处理架构性缺陷。
   - 执行方式：按“现象 → 根因 → 架构影响 → 最小长期修复”记录与实施；若暂时无法一次性重构，必须明确过渡方案、风险与后续移除计划。
   - 维护责任人：当前助手。
+- **state-sink-minimal-ancestor**：
+  - 约束/适用范围：前端状态应尽量下沉到最小公共组件层级；纯展示组件不得持有或混入业务状态，仅接收展示所需 props。
+  - 示例：仅 ChatPanel 使用的 agent、draft、handlers 下沉到 ChatPanel；App 只保留两面板共享的 sessionId、sessions；纯 UI 组件（MessageList、ChatInput 等）仅接收展示 props。
+  - 反例：将所有状态集中在顶层 App；或在纯展示组件内使用 useNcpAgent、useState 等业务状态。
+  - 执行方式：先分析数据流，标注各状态的使用者；仅被单一子树的消费的状态下沉到该子树根；纯展示组件不持有业务 hook 或业务 state。
+  - 维护责任人：当前助手。
 ## Project Rulebook
 
 - **prefer-local-openclaw-sibling-source**：
