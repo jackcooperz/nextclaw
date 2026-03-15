@@ -6,13 +6,13 @@
 
 - **后端**：提供 `POST /api/chat`（body 为本次请求）+ `GET /api/chat/stream?sessionId=...`（SSE，同一次对话的 accepted/text-delta/completed/failed 等事件）。
 - **协议**：请求/响应都走 NCP 事件；SSE 里每行一个 JSON，对应一个 `NcpEndpointEvent`。事件类型与 payload 定义在 `src/types/events.ts`，与 agent-chat 对齐（含 `message.text-*` / `message.reasoning-*` / `message.tool-call-*` / `run.*`）。
-- **后端**：持有一个 `NcpEndpoint`，收到 HTTP 请求时把 body 转成 `message.request` 注入端点（broadcast），端点的一个订阅者跑 Agent 并 broadcast accepted/delta/completed，另一个订阅者把事件写到 SSE 响应里。
+- **后端**：持有一个 `NcpAgentServerEndpoint`，收到 HTTP 请求时通过 `send/stream/abort` 进入服务端能力；`emit` 仅用于向前端订阅侧下行发布事件（如 accepted/delta/completed）。
 
 ---
 
 ## 1. 后端：Agent 端点 + HTTP/SSE
 
-后端有一个实现 `NcpAgentServerEndpoint` 的端点，用 `broadcast` 注入请求，用 `emit` 把事件推给所有订阅者（其中一个是 SSE 写出器）。
+后端有一个实现 `NcpAgentServerEndpoint` 的端点，用 `send/stream/abort` 处理请求，用 `emit` 把下行事件推给所有订阅者（其中一个是 SSE 写出器）。
 
 ```typescript
 // ---------- 后端：Server 端 NCP 端点 ----------
@@ -21,7 +21,9 @@ import {
   type NcpEndpointEvent,
   type NcpEndpointManifest,
   type NcpEndpointSubscriber,
+  type NcpMessageAbortPayload,
   type NcpRequestEnvelope,
+  type NcpStreamRequestPayload,
   type NcpMessage,
   type NcpError,
 } from "@nextclaw/ncp";
@@ -50,6 +52,18 @@ export class ServerAgentEndpoint implements NcpAgentServerEndpoint {
   async stop(): Promise<void> {
     if (!this.started) return;
     this.started = false;
+  }
+
+  async *send(envelope: NcpRequestEnvelope): AsyncIterable<NcpEndpointEvent> {
+    await this.emit({ type: "message.request", payload: envelope });
+  }
+
+  async *stream(_payload: NcpStreamRequestPayload): AsyncIterable<NcpEndpointEvent> {
+    // 示例省略历史回放实现。
+  }
+
+  async abort(_payload: NcpMessageAbortPayload = {}): Promise<void> {
+    // 示例省略中止实现。
   }
 
   async emit(event: NcpEndpointEvent): Promise<void> {
@@ -289,7 +303,7 @@ function showError(msg: string): void {
 
 | 角色 | 做什么 |
 |------|--------|
-| **后端** | 持有一个 `ServerAgentEndpoint`（实现 `NcpAgentServerEndpoint`），`injectRequest(envelope)` 把 POST body 转成 `message.request` 并 emit；一个订阅者跑 Agent 并 `emit` accepted/delta/completed/failed，另一个订阅者把事件写成 SSE 发给前端。 |
+| **后端** | 持有一个 `ServerAgentEndpoint`（实现 `NcpAgentServerEndpoint`），`send/stream/abort` 处理前端请求；`emit` 负责下行发布 accepted/delta/completed/failed 等事件；一个订阅者跑 Agent，另一个订阅者把事件写成 SSE 发给前端。 |
 | **前端** | POST 发送 `NcpRequestEnvelope`，读取响应 body 为 SSE 流，按行解析 JSON 得到 `NcpEndpointEvent`，根据 `message.accepted` / `message.text-*` / `message.completed` / `message.failed` 等更新 UI。 |
 | **协议** | 请求 = `message.request`（POST body）；响应 = 同一 SSE 流上的 NCP 事件，无需再定义一套「chat API」格式。 |
 

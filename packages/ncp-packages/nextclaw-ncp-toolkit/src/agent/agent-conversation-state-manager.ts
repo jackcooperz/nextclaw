@@ -1,18 +1,13 @@
 import {
   type NcpAgentConversationSnapshot,
   type NcpAgentConversationStateManager,
-  type NcpCompletedEnvelope,
   type NcpEndpointEvent,
   type NcpError,
-  type NcpFailedEnvelope,
   type NcpMessage,
   type NcpMessageAbortPayload,
-  type NcpMessageAcceptedPayload,
   type NcpMessageRole,
   type NcpMessageSentPayload,
   type NcpMessageStatus,
-  type NcpRequestEnvelope,
-  type NcpResponseEnvelope,
   type NcpRunContext,
   type NcpRunErrorPayload,
   type NcpRunFinishedPayload,
@@ -87,25 +82,8 @@ export class DefaultNcpAgentConversationStateManager
   async dispatch(event: NcpEndpointEvent): Promise<void> {
     const versionBeforeDispatch = this.stateVersion;
     switch (event.type) {
-      case NcpEventType.MessageRequest:
-        this.handleMessageRequest(event.payload);
-        break;
-      case NcpEventType.MessageStreamRequest:
-        break;
       case NcpEventType.MessageSent:
         this.handleMessageSent(event.payload);
-        break;
-      case NcpEventType.MessageAccepted:
-        this.handleMessageAccepted(event.payload);
-        break;
-      case NcpEventType.MessageIncoming:
-        this.handleMessageIncoming(event.payload);
-        break;
-      case NcpEventType.MessageCompleted:
-        this.handleMessageCompleted(event.payload);
-        break;
-      case NcpEventType.MessageFailed:
-        this.handleMessageFailed(event.payload);
         break;
       case NcpEventType.MessageAbort:
         this.handleMessageAbort(event.payload);
@@ -158,15 +136,6 @@ export class DefaultNcpAgentConversationStateManager
       case NcpEventType.EndpointError:
         this.handleEndpointError(event.payload);
         break;
-      case NcpEventType.EndpointReady:
-      case NcpEventType.TypingStart:
-      case NcpEventType.TypingEnd:
-      case NcpEventType.PresenceUpdated:
-      case NcpEventType.MessageRead:
-      case NcpEventType.MessageDelivered:
-      case NcpEventType.MessageRecalled:
-      case NcpEventType.MessageReaction:
-        break;
       default:
         break;
     }
@@ -179,82 +148,14 @@ export class DefaultNcpAgentConversationStateManager
     }
   }
 
-  handleMessageRequest(payload: NcpRequestEnvelope): void {
-    this.upsertMessage(payload.message);
-    this.setError(null);
-  }
-
   handleMessageSent(payload: NcpMessageSentPayload): void {
     this.upsertMessage(payload.message);
     this.setError(null);
   }
 
-  handleMessageAccepted(_payload: NcpMessageAcceptedPayload): void {
-    // Accepted acknowledges transport delivery and does not mutate conversation snapshot.
-  }
-
-  handleMessageIncoming(payload: NcpResponseEnvelope): void {
-    const incomingMessage = cloneMessage(payload.message);
-    if (incomingMessage.status === "streaming" || incomingMessage.status === "pending") {
-      this.replaceStreamingMessage(incomingMessage);
-      this.setError(null);
-      return;
-    }
-
-    this.upsertMessage(incomingMessage);
-    if (this.streamingMessage?.id === incomingMessage.id) {
-      this.replaceStreamingMessage(null);
-      this.clearToolCallTrackingByMessageId(incomingMessage.id);
-    }
-    this.setError(null);
-  }
-
-  handleMessageCompleted(payload: NcpCompletedEnvelope): void {
-    const completedMessage: NcpMessage = {
-      ...cloneMessage(payload.message),
-      status: "final",
-    };
-    this.upsertMessage(completedMessage);
-    if (this.streamingMessage?.id === completedMessage.id) {
-      this.replaceStreamingMessage(null);
-    }
-    this.clearToolCallTrackingByMessageId(completedMessage.id);
-    this.setError(null);
-  }
-
-  handleMessageFailed(payload: NcpFailedEnvelope): void {
-    this.setError(payload.error);
-    const targetMessageId = payload.messageId?.trim();
-    if (!targetMessageId) {
-      return;
-    }
-
-    if (this.streamingMessage?.id === targetMessageId) {
-      this.upsertMessage({
-        ...this.streamingMessage,
-        status: "error",
-      });
-      this.replaceStreamingMessage(null);
-      this.clearToolCallTrackingByMessageId(targetMessageId);
-      return;
-    }
-
-    const messageIndex = this.messages.findIndex((message) => message.id === targetMessageId);
-    if (messageIndex < 0) {
-      return;
-    }
-
-    const nextMessages = [...this.messages];
-    nextMessages[messageIndex] = {
-      ...nextMessages[messageIndex],
-      status: "error",
-    };
-    this.messages = nextMessages;
-    this.stateVersion += 1;
-  }
-
   handleMessageAbort(payload: NcpMessageAbortPayload): void {
     const targetMessageId = payload.messageId?.trim();
+    this.clearActiveRun();
     this.setError({
       code: "abort-error",
       message: "Message aborted.",
@@ -448,14 +349,31 @@ export class DefaultNcpAgentConversationStateManager
   }
 
   handleRunFinished(_payload: NcpRunFinishedPayload): void {
-    this.activeRun = null;
-    this.stateVersion += 1;
+    if (this.streamingMessage) {
+      const finalizedMessage: NcpMessage = {
+        ...this.streamingMessage,
+        status: "final",
+      };
+      this.upsertMessage(finalizedMessage);
+      this.replaceStreamingMessage(null);
+      this.clearToolCallTrackingByMessageId(finalizedMessage.id);
+    }
+    this.setError(null);
+    this.clearActiveRun();
   }
 
   handleRunError(payload: NcpRunErrorPayload): void {
+    if (this.streamingMessage) {
+      const failedMessage: NcpMessage = {
+        ...this.streamingMessage,
+        status: "error",
+      };
+      this.upsertMessage(failedMessage);
+      this.replaceStreamingMessage(null);
+      this.clearToolCallTrackingByMessageId(failedMessage.id);
+    }
     this.setError(buildRuntimeError(payload));
-    this.activeRun = null;
-    this.stateVersion += 1;
+    this.clearActiveRun();
   }
 
   handleRunMetadata(payload: NcpRunMetadataPayload): void {
@@ -470,8 +388,7 @@ export class DefaultNcpAgentConversationStateManager
       };
       this.stateVersion += 1;
     } else if (m?.kind === "final") {
-      this.activeRun = null;
-      this.stateVersion += 1;
+      this.clearActiveRun();
     }
   }
 
@@ -651,6 +568,14 @@ export class DefaultNcpAgentConversationStateManager
     this.error = nextError
       ? { ...nextError, details: nextError.details ? { ...nextError.details } : undefined }
       : null;
+    this.stateVersion += 1;
+  }
+
+  private clearActiveRun(): void {
+    if (!this.activeRun) {
+      return;
+    }
+    this.activeRun = null;
     this.stateVersion += 1;
   }
 

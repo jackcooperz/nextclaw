@@ -1,11 +1,6 @@
 import type {
-  NcpCompletedEnvelope,
-  NcpFailedEnvelope,
   NcpMessageAbortPayload,
-  NcpMessageAcceptedPayload,
   NcpMessageSentPayload,
-  NcpRequestEnvelope,
-  NcpResponseEnvelope,
   NcpRunErrorPayload,
   NcpRunFinishedPayload,
   NcpRunMetadataPayload,
@@ -37,13 +32,8 @@ import type {
  */
 export interface NcpAgentConversationStateManager extends NcpConversationStateManager {
   getSnapshot(): NcpAgentConversationSnapshot;
-  handleMessageRequest(payload: NcpRequestEnvelope): void;
   /** Local peer sent a message (outbound); typically non-streaming. Add to messages. */
   handleMessageSent(payload: NcpMessageSentPayload): void;
-  handleMessageAccepted(payload: NcpMessageAcceptedPayload): void;
-  handleMessageIncoming(payload: NcpResponseEnvelope): void;
-  handleMessageCompleted(payload: NcpCompletedEnvelope): void;
-  handleMessageFailed(payload: NcpFailedEnvelope): void;
   handleMessageAbort(payload: NcpMessageAbortPayload): void;
 
   handleMessageTextStart(payload: NcpTextStartPayload): void;

@@ -14,7 +14,7 @@ import {
   DefaultNcpToolRegistry,
   EchoNcpLLMApi,
 } from "@nextclaw/ncp-agent-runtime";
-import { DefaultNcpInMemoryAgentBackend } from "./in-memory-agent-backend.js";
+import { DefaultNcpInMemoryAgentBackend } from "./in-memory-agent-backend/index.js";
 
 const now = "2026-03-15T00:00:00.000Z";
 
@@ -46,7 +46,7 @@ function createBackend(llmApi: NcpLLMApi) {
 }
 
 describe("DefaultNcpInMemoryAgentBackend", () => {
-  it("stores completed assistant message and replays run events", async () => {
+  it("stores finalized assistant message and replays run events", async () => {
     const backend = createBackend(new EchoNcpLLMApi());
     const events: string[] = [];
     backend.subscribe((event) => {
@@ -59,7 +59,6 @@ describe("DefaultNcpInMemoryAgentBackend", () => {
     });
 
     expect(events).toContain(NcpEventType.MessageSent);
-    expect(events).toContain(NcpEventType.MessageCompleted);
     expect(events).toContain(NcpEventType.RunFinished);
 
     const sessions = await backend.listSessions();
@@ -88,7 +87,7 @@ describe("DefaultNcpInMemoryAgentBackend", () => {
     }
 
     expect(replayed).toContain(NcpEventType.MessageSent);
-    expect(replayed).toContain(NcpEventType.MessageCompleted);
+    expect(replayed).not.toContain(NcpEventType.MessageCompleted);
     expect(replayed.at(-1)).toBe(NcpEventType.RunFinished);
   });
 

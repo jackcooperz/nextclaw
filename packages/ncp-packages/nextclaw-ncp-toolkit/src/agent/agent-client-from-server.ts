@@ -27,19 +27,38 @@ export function createAgentClientFromServer(
       await server.stop();
     },
     async emit(event: NcpEndpointEvent): Promise<void> {
-      await server.emit(event);
+      switch (event.type) {
+        case NcpEventType.MessageRequest:
+          await consume(server.send(event.payload));
+          return;
+        case NcpEventType.MessageStreamRequest:
+          await consume(server.stream(event.payload));
+          return;
+        case NcpEventType.MessageAbort:
+          await server.abort(event.payload ?? {});
+          return;
+        default:
+          await server.emit(event);
+      }
     },
     subscribe(listener: NcpEndpointSubscriber) {
       return server.subscribe(listener);
     },
     async send(envelope: NcpRequestEnvelope): Promise<void> {
-      await server.emit({ type: NcpEventType.MessageRequest, payload: envelope });
+      await consume(server.send(envelope));
     },
     async stream(payload: NcpStreamRequestPayload): Promise<void> {
-      await server.emit({ type: NcpEventType.MessageStreamRequest, payload });
+      await consume(server.stream(payload));
     },
     async abort(payload?: NcpMessageAbortPayload): Promise<void> {
-      await server.emit({ type: NcpEventType.MessageAbort, payload: payload ?? {} });
+      await server.abort(payload ?? {});
     },
   };
+}
+
+async function consume(events: AsyncIterable<unknown>): Promise<void> {
+  for await (const event of events) {
+    // Consume iterator to execute server-side async generator side effects.
+    void event;
+  }
 }

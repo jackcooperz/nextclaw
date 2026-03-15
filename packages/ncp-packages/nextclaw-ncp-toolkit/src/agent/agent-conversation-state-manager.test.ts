@@ -17,7 +17,7 @@ const createMessage = (overrides: Partial<NcpMessage> = {}): NcpMessage => {
 };
 
 describe("DefaultNcpAgentConversationStateManager streaming", () => {
-  it("aggregates text streaming events and finalizes on message.completed", () => {
+  it("aggregates text streaming events and finalizes on run.finished", () => {
     const manager = new DefaultNcpAgentConversationStateManager();
 
     manager.dispatch({
@@ -56,15 +56,10 @@ describe("DefaultNcpAgentConversationStateManager streaming", () => {
     expect(midSnapshot.streamingMessage?.parts).toEqual([{ type: "text", text: "hello world" }]);
 
     manager.dispatch({
-      type: NcpEventType.MessageCompleted,
+      type: NcpEventType.RunFinished,
       payload: {
         sessionId: "session-1",
-        message: createMessage({
-          id: "assistant-1",
-          status: "final",
-          parts: [{ type: "text", text: "hello world" }],
-          role: "assistant",
-        }),
+        runId: "run-1",
       },
     });
 
@@ -73,6 +68,29 @@ describe("DefaultNcpAgentConversationStateManager streaming", () => {
     expect(snapshot.messages).toHaveLength(1);
     expect(snapshot.messages[0]?.id).toBe("assistant-1");
     expect(snapshot.messages[0]?.status).toBe("final");
+  });
+
+  it("clears activeRun on run.finished", () => {
+    const manager = new DefaultNcpAgentConversationStateManager();
+
+    manager.dispatch({
+      type: NcpEventType.RunStarted,
+      payload: {
+        sessionId: "session-1",
+        runId: "run-1",
+      },
+    });
+    expect(manager.getSnapshot().activeRun?.runId).toBe("run-1");
+
+    manager.dispatch({
+      type: NcpEventType.RunFinished,
+      payload: {
+        sessionId: "session-1",
+        runId: "run-1",
+      },
+    });
+
+    expect(manager.getSnapshot().activeRun).toBeNull();
   });
 
   it("handles reasoning and tool-call lifecycle on one streaming message", () => {
@@ -230,7 +248,7 @@ describe("DefaultNcpAgentConversationStateManager reasoning boundaries", () => {
 });
 
 describe("DefaultNcpAgentConversationStateManager error and notify", () => {
-  it("marks streaming message as error on message.failed", () => {
+  it("marks streaming message as error on run.error", () => {
     const manager = new DefaultNcpAgentConversationStateManager();
 
     manager.dispatch({
@@ -249,14 +267,11 @@ describe("DefaultNcpAgentConversationStateManager error and notify", () => {
       },
     });
     manager.dispatch({
-      type: NcpEventType.MessageFailed,
+      type: NcpEventType.RunError,
       payload: {
         sessionId: "session-1",
-        messageId: "assistant-3",
-        error: {
-          code: "runtime-error",
-          message: "failed",
-        },
+        runId: "run-3",
+        error: "failed",
       },
     });
 
@@ -267,7 +282,7 @@ describe("DefaultNcpAgentConversationStateManager error and notify", () => {
     expect(snapshot.messages[0]?.status).toBe("error");
   });
 
-  it("keeps subscriber silent on non-mutating message.accepted", () => {
+  it("keeps subscriber silent on non-handled request event", () => {
     const manager = new DefaultNcpAgentConversationStateManager();
     let callbackCount = 0;
 
@@ -276,9 +291,15 @@ describe("DefaultNcpAgentConversationStateManager error and notify", () => {
     });
 
     manager.dispatch({
-      type: NcpEventType.MessageAccepted,
+      type: NcpEventType.MessageRequest,
       payload: {
-        messageId: "assistant-0",
+        sessionId: "session-1",
+        message: createMessage({
+          id: "user-0",
+          role: "user",
+          status: "final",
+          parts: [{ type: "text", text: "ping" }],
+        }),
       },
     });
 
