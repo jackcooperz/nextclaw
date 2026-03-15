@@ -5,7 +5,12 @@ export function MessagePart({ part }: { part: NcpMessagePart }) {
     return <p className="part-text">{part.text}</p>;
   }
   if (part.type === "reasoning") {
-    return <p className="part-reasoning">reasoning: {part.text}</p>;
+    return (
+      <div className="part-reasoning-block">
+        <div className="part-reasoning-label">thinking</div>
+        <pre className="part-reasoning-text">{part.text}</pre>
+      </div>
+    );
   }
   if (part.type === "tool-invocation") {
     return (
