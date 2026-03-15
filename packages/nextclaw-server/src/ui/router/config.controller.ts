@@ -1,0 +1,274 @@
+import type { Context } from "hono";
+import {
+  buildConfigSchemaView,
+  buildConfigMeta,
+  buildConfigView,
+  executeConfigAction,
+  loadConfigOrDefault,
+  updateChannel,
+  updateModel,
+  updateSearch,
+  createCustomProvider,
+  deleteCustomProvider,
+  updateProvider,
+  testProviderConnection,
+  updateSecrets,
+  updateRuntime
+} from "../config.js";
+import { importProviderAuthFromCli, pollProviderAuth, startProviderAuth } from "../provider-auth.js";
+import type {
+  ConfigActionExecuteRequest,
+  ProviderConnectionTestRequest,
+  ProviderAuthStartRequest,
+  ProviderAuthPollResult,
+  ProviderAuthImportResult,
+  ProviderAuthStartResult,
+  ProviderCreateRequest,
+  ProviderCreateResult,
+  ProviderDeleteResult,
+  ProviderConfigUpdate,
+  SearchConfigUpdate,
+  SecretsConfigUpdate,
+  RuntimeConfigUpdate
+} from "../types.js";
+import { err, ok, readJson } from "./response.js";
+import type { UiRouterOptions } from "./types.js";
+
+export class ConfigRoutesController {
+  constructor(private readonly options: UiRouterOptions) {}
+
+  readonly getConfig = (c: Context) => {
+    const config = loadConfigOrDefault(this.options.configPath);
+    return c.json(ok(buildConfigView(config)));
+  };
+
+  readonly getConfigMeta = (c: Context) => {
+    const config = loadConfigOrDefault(this.options.configPath);
+    return c.json(ok(buildConfigMeta(config)));
+  };
+
+  readonly getConfigSchema = (c: Context) => {
+    const config = loadConfigOrDefault(this.options.configPath);
+    return c.json(ok(buildConfigSchemaView(config)));
+  };
+
+  readonly updateConfigModel = async (c: Context) => {
+    const body = await readJson<{ model?: string }>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+
+    const hasModel = typeof body.data.model === "string";
+    if (!hasModel) {
+      return c.json(err("INVALID_BODY", "model is required"), 400);
+    }
+
+    const view = updateModel(this.options.configPath, {
+      model: body.data.model
+    });
+
+    if (hasModel) {
+      this.options.publish({ type: "config.updated", payload: { path: "agents.defaults.model" } });
+    }
+
+    return c.json(ok({
+      model: view.agents.defaults.model
+    }));
+  };
+
+  readonly updateConfigSearch = async (c: Context) => {
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = updateSearch(this.options.configPath, body.data as SearchConfigUpdate);
+    this.options.publish({ type: "config.updated", payload: { path: "search" } });
+    return c.json(ok(result));
+  };
+
+  readonly updateProvider = async (c: Context) => {
+    const provider = c.req.param("provider");
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = updateProvider(this.options.configPath, provider, body.data as ProviderConfigUpdate);
+    if (!result) {
+      return c.json(err("NOT_FOUND", `unknown provider: ${provider}`), 404);
+    }
+    this.options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
+    return c.json(ok(result));
+  };
+
+  readonly createProvider = async (c: Context) => {
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = createCustomProvider(
+      this.options.configPath,
+      body.data as ProviderCreateRequest
+    );
+    this.options.publish({ type: "config.updated", payload: { path: `providers.${result.name}` } });
+    return c.json(ok({
+      name: result.name,
+      provider: result.provider
+    } satisfies ProviderCreateResult));
+  };
+
+  readonly deleteProvider = async (c: Context) => {
+    const provider = c.req.param("provider");
+    const result = deleteCustomProvider(this.options.configPath, provider);
+    if (result === null) {
+      return c.json(err("NOT_FOUND", `custom provider not found: ${provider}`), 404);
+    }
+    this.options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
+    return c.json(ok({
+      deleted: true,
+      provider
+    } satisfies ProviderDeleteResult));
+  };
+
+  readonly testProviderConnection = async (c: Context) => {
+    const provider = c.req.param("provider");
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = await testProviderConnection(
+      this.options.configPath,
+      provider,
+      body.data as ProviderConnectionTestRequest
+    );
+    if (!result) {
+      return c.json(err("NOT_FOUND", `unknown provider: ${provider}`), 404);
+    }
+    return c.json(ok(result));
+  };
+
+  readonly startProviderAuth = async (c: Context) => {
+    const provider = c.req.param("provider");
+    let payload: Record<string, unknown> = {};
+    const rawBody = await c.req.raw.text();
+    if (rawBody.trim().length > 0) {
+      try {
+        payload = JSON.parse(rawBody) as Record<string, unknown>;
+      } catch {
+        return c.json(err("INVALID_BODY", "invalid json body"), 400);
+      }
+    }
+    const methodId = typeof payload.methodId === "string"
+      ? payload.methodId.trim()
+      : undefined;
+    try {
+      const result = await startProviderAuth(this.options.configPath, provider, {
+        methodId
+      } satisfies ProviderAuthStartRequest);
+      if (!result) {
+        return c.json(err("NOT_SUPPORTED", `provider auth is not supported: ${provider}`), 404);
+      }
+      return c.json(ok(result satisfies ProviderAuthStartResult));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return c.json(err("AUTH_START_FAILED", message), 400);
+    }
+  };
+
+  readonly pollProviderAuth = async (c: Context) => {
+    const provider = c.req.param("provider");
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const sessionId = typeof body.data.sessionId === "string" ? body.data.sessionId.trim() : "";
+    if (!sessionId) {
+      return c.json(err("INVALID_BODY", "sessionId is required"), 400);
+    }
+
+    const result = await pollProviderAuth({
+      configPath: this.options.configPath,
+      providerName: provider,
+      sessionId
+    });
+    if (!result) {
+      return c.json(err("NOT_FOUND", "provider auth session not found"), 404);
+    }
+    if (result.status === "authorized") {
+      this.options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
+    }
+    return c.json(ok(result satisfies ProviderAuthPollResult));
+  };
+
+  readonly importProviderAuthFromCli = async (c: Context) => {
+    const provider = c.req.param("provider");
+    try {
+      const result = await importProviderAuthFromCli(this.options.configPath, provider);
+      if (!result) {
+        return c.json(err("NOT_SUPPORTED", `provider cli auth import is not supported: ${provider}`), 404);
+      }
+      this.options.publish({ type: "config.updated", payload: { path: `providers.${provider}` } });
+      return c.json(ok(result satisfies ProviderAuthImportResult));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      return c.json(err("AUTH_IMPORT_FAILED", message), 400);
+    }
+  };
+
+  readonly updateChannel = async (c: Context) => {
+    const channel = c.req.param("channel");
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = updateChannel(this.options.configPath, channel, body.data);
+    if (!result) {
+      return c.json(err("NOT_FOUND", `unknown channel: ${channel}`), 404);
+    }
+    this.options.publish({ type: "config.updated", payload: { path: `channels.${channel}` } });
+    return c.json(ok(result));
+  };
+
+  readonly updateSecrets = async (c: Context) => {
+    const body = await readJson<Record<string, unknown>>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = updateSecrets(this.options.configPath, body.data as SecretsConfigUpdate);
+    this.options.publish({ type: "config.updated", payload: { path: "secrets" } });
+    return c.json(ok(result));
+  };
+
+  readonly updateRuntime = async (c: Context) => {
+    const body = await readJson<RuntimeConfigUpdate>(c.req.raw);
+    if (!body.ok || !body.data || typeof body.data !== "object") {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = updateRuntime(this.options.configPath, body.data);
+    if (body.data.agents?.defaults && Object.prototype.hasOwnProperty.call(body.data.agents.defaults, "contextTokens")) {
+      this.options.publish({ type: "config.updated", payload: { path: "agents.defaults.contextTokens" } });
+    }
+    if (body.data.agents?.defaults && Object.prototype.hasOwnProperty.call(body.data.agents.defaults, "engine")) {
+      this.options.publish({ type: "config.updated", payload: { path: "agents.defaults.engine" } });
+    }
+    if (body.data.agents?.defaults && Object.prototype.hasOwnProperty.call(body.data.agents.defaults, "engineConfig")) {
+      this.options.publish({ type: "config.updated", payload: { path: "agents.defaults.engineConfig" } });
+    }
+    this.options.publish({ type: "config.updated", payload: { path: "agents.list" } });
+    this.options.publish({ type: "config.updated", payload: { path: "bindings" } });
+    this.options.publish({ type: "config.updated", payload: { path: "session" } });
+    return c.json(ok(result));
+  };
+
+  readonly executeAction = async (c: Context) => {
+    const actionId = c.req.param("actionId");
+    const body = await readJson<ConfigActionExecuteRequest>(c.req.raw);
+    if (!body.ok) {
+      return c.json(err("INVALID_BODY", "invalid json body"), 400);
+    }
+    const result = await executeConfigAction(this.options.configPath, actionId, body.data ?? {});
+    if (!result.ok) {
+      return c.json(err(result.code, result.message, result.details), 400);
+    }
+    return c.json(ok(result.data));
+  };
+}
