@@ -1,14 +1,21 @@
 export { DefaultNcpAgentConversationStateManager } from "./agent-conversation-state-manager.js";
 export { createAgentClientFromServer } from "./agent-client-from-server.js";
 export {
-  DefaultNcpInMemoryAgentBackend,
+  DefaultNcpAgentBackend,
   EventPublisher,
-  InMemoryRunStore,
-  InMemorySessionStore,
+  InMemoryAgentRunStore,
+  InMemoryAgentSessionStore,
+  InMemoryRunControllerRegistry,
   AgentRunExecutor,
-} from "./in-memory-agent-backend/index.js";
+} from "./agent-backend/index.js";
 export type {
-  DefaultNcpInMemoryAgentBackendConfig,
+  DefaultNcpAgentBackendConfig,
+  AgentRunStore,
+  AgentSessionRecord,
+  AgentSessionStore,
+  CreateRuntimeFn,
+  LiveSessionState,
+  RunControllerRegistry,
   RunRecord,
-  SessionState,
-} from "./in-memory-agent-backend/index.js";
+  RuntimeFactoryParams,
+} from "./agent-backend/index.js";

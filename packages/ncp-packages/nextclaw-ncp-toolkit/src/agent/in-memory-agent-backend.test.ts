@@ -9,12 +9,17 @@ import {
   NcpEventType,
 } from "@nextclaw/ncp";
 import {
-  DefaultNcpAgentRuntime,
   DefaultNcpContextBuilder,
+  DefaultNcpAgentRuntime,
   DefaultNcpToolRegistry,
   EchoNcpLLMApi,
 } from "@nextclaw/ncp-agent-runtime";
-import { DefaultNcpInMemoryAgentBackend } from "./in-memory-agent-backend/index.js";
+import {
+  DefaultNcpAgentBackend,
+  InMemoryAgentRunStore,
+  InMemoryAgentSessionStore,
+  InMemoryRunControllerRegistry,
+} from "./index.js";
 
 const now = "2026-03-15T00:00:00.000Z";
 
@@ -32,7 +37,10 @@ const createEnvelope = (text: string): NcpRequestEnvelope => ({
 });
 
 function createBackend(llmApi: NcpLLMApi) {
-  return new DefaultNcpInMemoryAgentBackend({
+  return new DefaultNcpAgentBackend({
+    sessionStore: new InMemoryAgentSessionStore(),
+    runStore: new InMemoryAgentRunStore(),
+    controllerRegistry: new InMemoryRunControllerRegistry(),
     createRuntime: ({ stateManager }: { stateManager: NcpAgentConversationStateManager }) => {
       const toolRegistry = new DefaultNcpToolRegistry();
       return new DefaultNcpAgentRuntime({
@@ -45,7 +53,7 @@ function createBackend(llmApi: NcpLLMApi) {
   });
 }
 
-describe("DefaultNcpInMemoryAgentBackend", () => {
+describe("DefaultNcpAgentBackend with in-memory stores", () => {
   it("stores finalized assistant message and replays run events", async () => {
     const backend = createBackend(new EchoNcpLLMApi());
     const events: string[] = [];
@@ -125,8 +133,40 @@ describe("DefaultNcpInMemoryAgentBackend", () => {
   });
 });
 
+describe("DefaultNcpAgentBackend", () => {
+  it("accepts injected stores through the generic core", async () => {
+    const sessionStore = new RecordingSessionStore();
+    const backend = new DefaultNcpAgentBackend({
+      createRuntime: ({ stateManager }: { stateManager: NcpAgentConversationStateManager }) => {
+        const toolRegistry = new DefaultNcpToolRegistry();
+        return new DefaultNcpAgentRuntime({
+          contextBuilder: new DefaultNcpContextBuilder(toolRegistry),
+          llmApi: new EchoNcpLLMApi(),
+          toolRegistry,
+          stateManager,
+        });
+      },
+      sessionStore,
+      runStore: new InMemoryAgentRunStore(),
+      controllerRegistry: new InMemoryRunControllerRegistry(),
+    });
+
+    await backend.emit({
+      type: NcpEventType.MessageRequest,
+      payload: createEnvelope("generic"),
+    });
+
+    expect(sessionStore.saveCallCount).toBeGreaterThan(0);
+    const messages = await backend.listSessionMessages("session-1");
+    expect(messages.at(-1)).toMatchObject({
+      role: "assistant",
+      parts: [{ type: "text", text: "generic" }],
+    });
+  });
+});
+
 async function findRunId(
-  backend: DefaultNcpInMemoryAgentBackend,
+  backend: DefaultNcpAgentBackend,
   envelope: NcpRequestEnvelope,
 ): Promise<string> {
   const runIds: string[] = [];
@@ -189,4 +229,13 @@ async function waitFor(assertion: () => boolean): Promise<void> {
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+class RecordingSessionStore extends InMemoryAgentSessionStore {
+  saveCallCount = 0;
+
+  override async saveSession(...args: Parameters<InMemoryAgentSessionStore["saveSession"]>) {
+    this.saveCallCount += 1;
+    await super.saveSession(...args);
+  }
 }
