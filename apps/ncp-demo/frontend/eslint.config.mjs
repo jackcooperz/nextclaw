@@ -11,7 +11,7 @@ export default [
         "error",
         {
           case: "kebabCase",
-          ignore: [/^App\.tsx$/, /^main\.tsx$/, /^vite\.config\.ts$/, /^eslint\.config\.mjs$/, /^tsconfig.*\.json$/]
+          ignore: [/^main\.tsx$/, /^vite\.config\.ts$/, /^eslint\.config\.mjs$/, /^tsconfig.*\.json$/]
         }
       ]
     }
