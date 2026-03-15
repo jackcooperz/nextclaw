@@ -73,7 +73,7 @@ export function* emitReasoningDelta(
 export function* emitToolCallDeltas(
   delta: DeltaLike,
   buffers: Map<number, ToolCallBuffer>,
-  sessionId: string,
+  ctx: { sessionId: string; messageId: string },
 ): Generator<NcpEndpointEvent> {
   const toolDeltas = delta.tool_calls;
   if (!Array.isArray(toolDeltas)) return;
@@ -86,7 +86,7 @@ export function* emitToolCallDeltas(
     if (current.id && current.name && !current.emittedStart) {
       yield {
         type: NcpEventType.MessageToolCallStart,
-        payload: { sessionId, toolCallId: current.id, toolName: current.name },
+        payload: { ...ctx, toolCallId: current.id, toolName: current.name },
       };
       buffers.set(index, { ...current, emittedStart: true });
     } else {
@@ -97,18 +97,18 @@ export function* emitToolCallDeltas(
 
 export function* flushToolCalls(
   buffers: Map<number, ToolCallBuffer>,
-  sessionId: string,
+  ctx: { sessionId: string; messageId: string },
 ): Generator<NcpEndpointEvent> {
   const ordered = Array.from(buffers.entries()).sort(([a], [b]) => a - b);
   for (const [, buf] of ordered) {
     if (!buf.id || !buf.name) continue;
     yield {
       type: NcpEventType.MessageToolCallArgs,
-      payload: { sessionId, toolCallId: buf.id, args: buf.argumentsText },
+      payload: { ...ctx, toolCallId: buf.id, args: buf.argumentsText },
     };
     yield {
       type: NcpEventType.MessageToolCallEnd,
-      payload: { sessionId, toolCallId: buf.id },
+      payload: { ...ctx, toolCallId: buf.id },
     };
   }
 }

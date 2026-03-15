@@ -29,12 +29,12 @@ export class DefaultNcpStreamEncoder implements NcpStreamEncoder {
         const nextState = yield* emitTextDeltas(delta, { sessionId, messageId }, state);
         state = nextState;
         yield* emitReasoningDelta(delta, { sessionId, messageId });
-        yield* emitToolCallDeltas(delta, toolCallBuffers, sessionId);
+        yield* emitToolCallDeltas(delta, toolCallBuffers, { sessionId, messageId });
       }
 
       const finishReason = choice.finish_reason;
       if (typeof finishReason === "string" && finishReason.trim().length > 0) {
-        yield* flushToolCalls(toolCallBuffers, sessionId);
+        yield* flushToolCalls(toolCallBuffers, { sessionId, messageId });
         if (state.textStarted) {
           yield { type: NcpEventType.MessageTextEnd, payload: { sessionId, messageId } };
         }
