@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-06-24T06:15:11.051Z",
+  "generatedAt": "2026-06-25T06:18:19.864Z",
   "base": {
     "name": "nextclaw",
     "projectRoot": "/home/runner/work/nextclaw/nextclaw",
@@ -73,17 +73,17 @@
       ]
     },
     "totals": {
-      "files": 15766,
-      "totalLines": 4403659,
-      "blankLines": 356932,
-      "commentLines": 109032,
-      "codeLines": 3937695
+      "files": 15784,
+      "totalLines": 4418543,
+      "blankLines": 358021,
+      "commentLines": 109441,
+      "codeLines": 3951081
     }
   },
   "comparison": {
-    "baseMinusBenchmarkLines": -3862811,
+    "baseMinusBenchmarkLines": -3876197,
     "basePercentOfBenchmark": 1.9,
-    "benchmarkMultipleOfBase": 52.58,
+    "benchmarkMultipleOfBase": 52.76,
     "baseIsLighterByPercent": 98.1
   }
 }
